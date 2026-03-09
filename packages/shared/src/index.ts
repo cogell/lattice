@@ -45,4 +45,30 @@ export {
   type UpdateFieldInput,
 } from "./fields.js";
 
+export {
+  nodeSchema,
+  createNodeSchema,
+  updateNodeSchema,
+  type Node,
+  type CreateNodeInput,
+  type UpdateNodeInput,
+} from "./nodes.js";
+
+export {
+  edgeSchema,
+  createEdgeSchema,
+  updateEdgeSchema,
+  type Edge,
+  type CreateEdgeInput,
+  type UpdateEdgeInput,
+} from "./edges.js";
+
 export { createApiClient, ApiError } from "./api-client.js";
+
+export {
+  validateEntityData,
+  type FieldDefinition,
+  type ValidationError,
+  type ValidationResult,
+  type ValidateEntityDataOptions,
+} from "./validate-data.js";

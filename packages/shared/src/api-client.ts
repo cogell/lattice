@@ -33,6 +33,22 @@ import {
   type NodeTypeField,
   type EdgeTypeField,
 } from "./fields.js";
+import {
+  nodeSchema,
+  createNodeSchema,
+  updateNodeSchema,
+  type Node,
+  type CreateNodeInput,
+  type UpdateNodeInput,
+} from "./nodes.js";
+import {
+  edgeSchema,
+  createEdgeSchema,
+  updateEdgeSchema,
+  type Edge,
+  type CreateEdgeInput,
+  type UpdateEdgeInput,
+} from "./edges.js";
 
 class ApiError extends Error {
   constructor(
@@ -79,6 +95,10 @@ export function createApiClient(
   const edgeTypeListResponse = dataWrapper(z.array(edgeTypeSchema));
   const nodeTypeFieldResponse = dataWrapper(nodeTypeFieldSchema);
   const edgeTypeFieldResponse = dataWrapper(edgeTypeFieldSchema);
+  const nodeResponse = dataWrapper(nodeSchema);
+  const nodeListResponse = dataWrapper(z.array(nodeSchema));
+  const edgeResponse = dataWrapper(edgeSchema);
+  const edgeListResponse = dataWrapper(z.array(edgeSchema));
 
   return {
     _baseUrl: baseUrl,
@@ -274,6 +294,100 @@ export function createApiClient(
 
     async deleteEdgeTypeField(graphId: string, edgeTypeId: string, fieldId: string): Promise<void> {
       const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields/${fieldId}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      await parseResponse(res, z.undefined());
+    },
+
+    // --- Node endpoints ---
+
+    async createNode(graphId: string, input: CreateNodeInput): Promise<Node> {
+      const body = createNodeSchema.parse(input);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const parsed = await parseResponse(res, nodeResponse);
+      return parsed.data;
+    },
+
+    async listNodes(graphId: string, nodeTypeId?: string): Promise<Node[]> {
+      const url = nodeTypeId
+        ? `${baseUrl}/graphs/${graphId}/nodes?type=${nodeTypeId}`
+        : `${baseUrl}/graphs/${graphId}/nodes`;
+      const res = await fetch(url, { headers: headers() });
+      const parsed = await parseResponse(res, nodeListResponse);
+      return parsed.data;
+    },
+
+    async getNode(graphId: string, nodeId: string): Promise<Node> {
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, { headers: headers() });
+      const parsed = await parseResponse(res, nodeResponse);
+      return parsed.data;
+    },
+
+    async updateNode(graphId: string, nodeId: string, input: UpdateNodeInput): Promise<Node> {
+      const body = updateNodeSchema.parse(input);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const parsed = await parseResponse(res, nodeResponse);
+      return parsed.data;
+    },
+
+    async deleteNode(graphId: string, nodeId: string): Promise<void> {
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
+        method: "DELETE",
+        headers: headers(),
+      });
+      await parseResponse(res, z.undefined());
+    },
+
+    // --- Edge endpoints ---
+
+    async createEdge(graphId: string, input: CreateEdgeInput): Promise<Edge> {
+      const body = createEdgeSchema.parse(input);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const parsed = await parseResponse(res, edgeResponse);
+      return parsed.data;
+    },
+
+    async listEdges(graphId: string, edgeTypeId?: string): Promise<Edge[]> {
+      const url = edgeTypeId
+        ? `${baseUrl}/graphs/${graphId}/edges?type=${edgeTypeId}`
+        : `${baseUrl}/graphs/${graphId}/edges`;
+      const res = await fetch(url, { headers: headers() });
+      const parsed = await parseResponse(res, edgeListResponse);
+      return parsed.data;
+    },
+
+    async getEdge(graphId: string, edgeId: string): Promise<Edge> {
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, { headers: headers() });
+      const parsed = await parseResponse(res, edgeResponse);
+      return parsed.data;
+    },
+
+    async updateEdge(graphId: string, edgeId: string, input: UpdateEdgeInput): Promise<Edge> {
+      const body = updateEdgeSchema.parse(input);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify(body),
+      });
+      const parsed = await parseResponse(res, edgeResponse);
+      return parsed.data;
+    },
+
+    async deleteEdge(graphId: string, edgeId: string): Promise<void> {
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
         method: "DELETE",
         headers: headers(),
       });
