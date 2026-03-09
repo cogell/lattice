@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { generateId } from "../lib/id.js";
 import { errorResponse } from "../lib/errors.js";
 import { graphOwnerMiddleware } from "../middleware/graph-owner.js";
+import { nodeTypes } from "./node-types.js";
+import { edgeTypes } from "./edge-types.js";
 import type { Bindings } from "../index.js";
 
 const graphs = new Hono<{ Bindings: Bindings }>();
@@ -93,6 +95,10 @@ graphs.patch("/:graphId", async (c) => {
     },
   });
 });
+
+// Sub-routes (graph ownership already verified by middleware above)
+graphs.route("/:graphId/node-types", nodeTypes);
+graphs.route("/:graphId/edge-types", edgeTypes);
 
 // DELETE /graphs/:graphId — delete graph and all related data (cascade)
 graphs.delete("/:graphId", async (c) => {
