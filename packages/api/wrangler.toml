@@ -1,0 +1,15 @@
+account_id = "55664958f74c6a5abefa8406d86334ea"
+name = "lattice-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lattice"
+database_id = "0d53f5c5-a00c-4fef-badd-528ffa7ff826"
+migrations_dir = "migrations"

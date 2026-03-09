@@ -1,0 +1,23 @@
+{
+  "name": "@lattice/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lattice/shared": "workspace:*",
+    "hono": "^4.12.5",
+    "ulid-workers": "^2.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.20",
+    "@cloudflare/workers-types": "latest",
+    "@vitest/runner": "^3.2.4",
+    "@vitest/snapshot": "^3.2.4",
+    "vitest": "^3.2.4",
+    "wrangler": "latest"
+  }
+}

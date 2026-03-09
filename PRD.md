@@ -12,7 +12,7 @@ Lattice is a web application that lets users define typed nodes and edges with c
 2. **Graph view** — Interactive visualization of all nodes and edges using React Flow with auto-layout
 3. **REST API + CLI** — Full CRUD parity with the UI, authenticated via PAT tokens, with a SKILL.md for AI agent consumption
 
-Users authenticate via email magic link (BetterAuth + Resend). Each user can own multiple graphs (UI starts with one, schema supports many). Graphs can be shared with other users (full access).
+Users authenticate via email magic link (BetterAuth + Resend). Each user can own multiple graphs (UI starts with one, schema supports many).
 
 ## User Stories
 
@@ -26,12 +26,9 @@ Users authenticate via email magic link (BetterAuth + Resend). Each user can own
 
 ### Graph Management
 7. As a user, I want to create a new graph with a name and optional description, so that I can organize different domains of data.
-8. As a user, I want to see a list of graphs I own or have access to, so that I can navigate between them.
+8. As a user, I want to see a list of graphs I own, so that I can navigate between them.
 9. As a user, I want to rename or update the description of a graph I own, so that I can keep my workspace organized.
 10. As a user, I want to delete a graph I own, so that I can clean up unused data.
-11. As a graph owner, I want to share my graph with another user by email (full access), so that we can collaborate.
-12. As a graph owner, I want to remove a collaborator's access, so that I can control who sees my data.
-13. As a collaborator, I want to see shared graphs alongside my own, so that I have a unified workspace.
 
 ### Node Type & Field Definitions
 14. As a user, I want to create a node type (e.g., "Person", "Organization") with a name and optional color/icon, so that I can model my domain.
@@ -95,7 +92,7 @@ Users authenticate via email magic link (BetterAuth + Resend). Each user can own
 ### CLI
 59. As a CLI user, I want to configure my API URL and PAT token via `lattice config set`, so that I can authenticate once and run commands.
 60. As a CLI user, I want commands for all CRUD operations (e.g., `lattice nodes create --type Person --data '{"name":"Alice"}'`), so that I have full parity with the UI.
-61. As a CLI user, I want `lattice nodes list --type Person --filter "age>30"` to query nodes, so that I can script data retrieval.
+61. As a CLI user, I want `lattice nodes list --type Person --filter 'name[contains]=Alice'` to query nodes, so that I can script data retrieval.
 62. As a CLI user, I want `lattice import nodes --type Person --file people.csv` and `lattice export nodes --type Person`, so that I can bulk-load and extract data.
 63. As a CLI user, I want `lattice graphs list` and `lattice graphs use <id>` to switch context, so that I can work across multiple graphs.
 64. As a CLI user, I want human-readable table output by default and `--json` for machine-readable output, so that the CLI works for both humans and scripts.
@@ -124,11 +121,10 @@ The schema uses relational tables for structure definitions (types, fields) and 
 - `sessions` — managed by BetterAuth
 - `pat_tokens` — id, user_id, name, token_hash, created_at, last_used_at
 - `graphs` — id, name, description, created_by, created_at, updated_at
-- `graph_members` — graph_id, user_id, role (owner | collaborator), invited_at
-- `node_types` — id, graph_id, name, slug, color, icon, created_at, updated_at
-- `node_type_fields` — id, node_type_id, name, slug, field_type, ordinal, config (JSON — e.g., select options), created_at
-- `edge_types` — id, graph_id, name, slug, directed (boolean), source_node_type_id (nullable), target_node_type_id (nullable), created_at, updated_at
-- `edge_type_fields` — id, edge_type_id, name, slug, field_type, ordinal, config (JSON), created_at
+- `node_types` — id, graph_id, name, slug, color, icon, display_field_slug (nullable FK to node_type_fields), created_at, updated_at
+- `node_type_fields` — id, node_type_id, name, slug, field_type, ordinal, required (boolean, default false), config (JSON — e.g., select options), created_at, updated_at
+- `edge_types` — id, graph_id, name, slug, directed (boolean), source_node_type_id, target_node_type_id, created_at, updated_at
+- `edge_type_fields` — id, edge_type_id, name, slug, field_type, ordinal, required (boolean, default false), config (JSON), created_at, updated_at
 - `nodes` — id, graph_id, node_type_id, data (JSON), created_at, updated_at
 - `edges` — id, graph_id, edge_type_id, source_node_id, target_node_id, data (JSON), created_at, updated_at
 
@@ -150,17 +146,17 @@ The schema uses relational tables for structure definitions (types, fields) and 
 - Auth: `Authorization: Bearer <pat_token>` or session cookie
 - Resources: `/graphs`, `/graphs/:graphId/node-types`, `/graphs/:graphId/edge-types`, `/graphs/:graphId/nodes`, `/graphs/:graphId/edges`
 - Pagination: cursor-based using `?cursor=<id>&limit=50`
-- Filtering: query params like `?filter[field_name]=value` (simple equality and comparison operators to start)
+- Filtering: query params like `?filter[field_slug][op]=value` (operators: eq, contains, is_null)
 - Bulk operations: `POST /graphs/:graphId/nodes/bulk` with array body
 - CSV import/export: `POST /graphs/:graphId/nodes/import?type=<nodeTypeId>` (multipart form), `GET /graphs/:graphId/nodes/export?type=<nodeTypeId>` (returns CSV)
 
 ### Frontend Routing (TanStack Router)
 - `/` — Dashboard (list graphs)
-- `/graphs/:graphId` — Graph overview / redirect to default view
+- `/graphs/:graphId` — Redirects to `/graphs/:graphId/view`
 - `/graphs/:graphId/nodes/:nodeTypeSlug` — Table view for a node type
 - `/graphs/:graphId/edges/:edgeTypeSlug` — Table view for an edge type
 - `/graphs/:graphId/view` — Graph visualization
-- `/graphs/:graphId/settings` — Graph settings, types, sharing
+- `/graphs/:graphId/settings` — Graph settings, types
 - `/settings` — User settings, PAT token management
 
 ### CLI Structure
@@ -206,6 +202,8 @@ Good tests verify external behavior through public interfaces, not implementatio
 - Onboarding flow
 - Social login (Google, GitHub)
 - Mobile-responsive design (desktop-first)
+- Graph sharing / collaboration (inviting other users to a graph)
+- Pending invite flow
 - Node position persistence in graph view (auto-layout only)
 - Editing nodes/edges from within the graph view
 
@@ -214,5 +212,5 @@ Good tests verify external behavior through public interfaces, not implementatio
 - **D1 performance**: Monitor query performance as graphs grow. The JSON `data` column approach avoids complex JOINs but limits server-side filtering. If filtering becomes a bottleneck, consider adding a `node_field_index` table with extracted values for commonly filtered fields.
 - **React Flow limits**: React Flow handles ~500 nodes well. For larger graphs, we may need to switch to a canvas-based renderer (Sigma.js, Cytoscape.js) or implement viewport culling. This is a known future consideration.
 - **Future multi-graph UI**: The schema is designed with `graph_id` on all tables. When we add multi-graph UI, no schema migration is needed — just UI work.
-- **Future sharing roles**: The `graph_members.role` column supports future role-based access (viewer, editor). For v1, only "owner" and "collaborator" (full access) exist.
+- **Future sharing**: The schema can be extended with a `graph_members` table to support graph sharing and role-based access (viewer, editor, collaborator) when needed.
 - **CLI as SKILL.md**: The SKILL.md will document all CLI commands with examples, input/output formats, and common workflows (e.g., "create a Person node type, add fields, then bulk-import from CSV"). This enables AI agents to use Lattice as a graph-building tool.
