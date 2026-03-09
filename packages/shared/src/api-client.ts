@@ -49,6 +49,45 @@ import {
   type CreateEdgeInput,
   type UpdateEdgeInput,
 } from "./edges.js";
+import {
+  paginationMetaSchema,
+  type PaginationMeta,
+  type FilterOperator,
+} from "./pagination.js";
+
+/** Options for paginated list endpoints. */
+export interface ListOptions {
+  limit?: number;
+  offset?: number;
+  sort?: string; // "fieldSlug:asc" or "fieldSlug:desc"
+  filters?: Record<string, Partial<Record<FilterOperator, string>>>;
+}
+
+/** Return type for paginated list endpoints. */
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: PaginationMeta;
+}
+
+/** Build a query string from ListOptions + optional extra params. */
+function buildListQuery(opts?: ListOptions, extra?: Record<string, string>): string {
+  const params = new URLSearchParams();
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) params.set(k, v);
+  }
+  if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+  if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
+  if (opts?.sort) params.set("sort", opts.sort);
+  if (opts?.filters) {
+    for (const [slug, ops] of Object.entries(opts.filters)) {
+      for (const [op, value] of Object.entries(ops)) {
+        if (value !== undefined) params.set(`filter[${slug}][${op}]`, value);
+      }
+    }
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
 
 class ApiError extends Error {
   constructor(
@@ -88,7 +127,6 @@ export function createApiClient(
     z.object({ data: schema });
 
   const graphResponse = dataWrapper(graphSchema);
-  const graphListResponse = dataWrapper(z.array(graphSchema));
   const nodeTypeResponse = dataWrapper(nodeTypeSchema);
   const nodeTypeListResponse = dataWrapper(z.array(nodeTypeSchema));
   const edgeTypeResponse = dataWrapper(edgeTypeSchema);
@@ -96,9 +134,14 @@ export function createApiClient(
   const nodeTypeFieldResponse = dataWrapper(nodeTypeFieldSchema);
   const edgeTypeFieldResponse = dataWrapper(edgeTypeFieldSchema);
   const nodeResponse = dataWrapper(nodeSchema);
-  const nodeListResponse = dataWrapper(z.array(nodeSchema));
   const edgeResponse = dataWrapper(edgeSchema);
-  const edgeListResponse = dataWrapper(z.array(edgeSchema));
+
+  // Paginated response schemas for list endpoints
+  const paginatedWrapper = <S extends z.ZodTypeAny>(schema: S) =>
+    z.object({ data: z.array(schema), pagination: paginationMetaSchema });
+  const graphPaginatedResponse = paginatedWrapper(graphSchema);
+  const nodePaginatedResponse = paginatedWrapper(nodeSchema);
+  const edgePaginatedResponse = paginatedWrapper(edgeSchema);
 
   return {
     _baseUrl: baseUrl,
@@ -117,10 +160,10 @@ export function createApiClient(
       return parsed.data;
     },
 
-    async listGraphs(): Promise<Graph[]> {
-      const res = await fetch(`${baseUrl}/graphs`, { headers: headers() });
-      const parsed = await parseResponse(res, graphListResponse);
-      return parsed.data;
+    async listGraphs(opts?: ListOptions): Promise<PaginatedResult<Graph>> {
+      const qs = buildListQuery(opts);
+      const res = await fetch(`${baseUrl}/graphs${qs}`, { headers: headers() });
+      return parseResponse(res, graphPaginatedResponse);
     },
 
     async getGraph(graphId: string): Promise<Graph> {
@@ -313,13 +356,11 @@ export function createApiClient(
       return parsed.data;
     },
 
-    async listNodes(graphId: string, nodeTypeId?: string): Promise<Node[]> {
-      const url = nodeTypeId
-        ? `${baseUrl}/graphs/${graphId}/nodes?type=${nodeTypeId}`
-        : `${baseUrl}/graphs/${graphId}/nodes`;
-      const res = await fetch(url, { headers: headers() });
-      const parsed = await parseResponse(res, nodeListResponse);
-      return parsed.data;
+    async listNodes(graphId: string, nodeTypeId?: string, opts?: ListOptions): Promise<PaginatedResult<Node>> {
+      const extra = nodeTypeId ? { type: nodeTypeId } : undefined;
+      const qs = buildListQuery(opts, extra);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes${qs}`, { headers: headers() });
+      return parseResponse(res, nodePaginatedResponse);
     },
 
     async getNode(graphId: string, nodeId: string): Promise<Node> {
@@ -360,13 +401,11 @@ export function createApiClient(
       return parsed.data;
     },
 
-    async listEdges(graphId: string, edgeTypeId?: string): Promise<Edge[]> {
-      const url = edgeTypeId
-        ? `${baseUrl}/graphs/${graphId}/edges?type=${edgeTypeId}`
-        : `${baseUrl}/graphs/${graphId}/edges`;
-      const res = await fetch(url, { headers: headers() });
-      const parsed = await parseResponse(res, edgeListResponse);
-      return parsed.data;
+    async listEdges(graphId: string, edgeTypeId?: string, opts?: ListOptions): Promise<PaginatedResult<Edge>> {
+      const extra = edgeTypeId ? { type: edgeTypeId } : undefined;
+      const qs = buildListQuery(opts, extra);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges${qs}`, { headers: headers() });
+      return parseResponse(res, edgePaginatedResponse);
     },
 
     async getEdge(graphId: string, edgeId: string): Promise<Edge> {

@@ -123,14 +123,16 @@ async function createEdge(graphId: string, body: object) {
   };
 }
 
-async function listEdges(graphId: string, type?: string) {
-  const url = type
-    ? `http://localhost/api/v1/graphs/${graphId}/edges?type=${type}`
+type PaginationMeta = { total: number; limit: number; offset: number; has_more: boolean };
+
+async function listEdges(graphId: string, params?: string) {
+  const url = params
+    ? `http://localhost/api/v1/graphs/${graphId}/edges?${params}`
     : `http://localhost/api/v1/graphs/${graphId}/edges`;
   const res = await SELF.fetch(url);
   return {
     status: res.status,
-    body: await res.json<{ data: EdgeData[] }>(),
+    body: await res.json<{ data: EdgeData[]; pagination: PaginationMeta }>(),
   };
 }
 
@@ -432,13 +434,13 @@ describe("Edge CRUD", () => {
     });
 
     // Filter by first edge type
-    const { status, body } = await listEdges(graphId, edgeTypeId);
+    const { status, body } = await listEdges(graphId, `type=${edgeTypeId}`);
     expect(status).toBe(200);
     expect(body.data.length).toBe(1);
     expect(body.data[0].edge_type_id).toBe(edgeTypeId);
 
     // Filter by second edge type
-    const { body: body2 } = await listEdges(graphId, et2);
+    const { body: body2 } = await listEdges(graphId, `type=${et2}`);
     expect(body2.data.length).toBe(1);
     expect(body2.data[0].edge_type_id).toBe(et2);
   });

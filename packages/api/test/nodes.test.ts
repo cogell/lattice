@@ -117,14 +117,16 @@ async function createNode(graphId: string, body: object) {
   };
 }
 
-async function listNodes(graphId: string, type?: string) {
-  const url = type
-    ? `http://localhost/api/v1/graphs/${graphId}/nodes?type=${type}`
+type PaginationMeta = { total: number; limit: number; offset: number; has_more: boolean };
+
+async function listNodes(graphId: string, params?: string) {
+  const url = params
+    ? `http://localhost/api/v1/graphs/${graphId}/nodes?${params}`
     : `http://localhost/api/v1/graphs/${graphId}/nodes`;
   const res = await SELF.fetch(url);
   return {
     status: res.status,
-    body: await res.json<{ data: NodeData[] }>(),
+    body: await res.json<{ data: NodeData[]; pagination: PaginationMeta }>(),
   };
 }
 
@@ -278,7 +280,7 @@ describe("Node CRUD", () => {
     await createNode(graphId, { node_type_id: ntA, data: {} });
     await createNode(graphId, { node_type_id: ntB, data: {} });
 
-    const { status, body } = await listNodes(graphId, ntA);
+    const { status, body } = await listNodes(graphId, `type=${ntA}`);
 
     expect(status).toBe(200);
     expect(body.data.length).toBe(2);

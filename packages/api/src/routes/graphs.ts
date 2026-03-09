@@ -6,6 +6,7 @@ import { nodeTypes } from "./node-types.js";
 import { edgeTypes } from "./edge-types.js";
 import { nodes } from "./nodes.js";
 import { edges } from "./edges.js";
+import { parsePaginationParams, PaginationError } from "@lattice/shared";
 import type { Bindings } from "../index.js";
 
 const graphs = new Hono<{ Bindings: Bindings }>();
@@ -47,13 +48,37 @@ graphs.post("/", async (c) => {
 graphs.get("/", async (c) => {
   const user = c.get("user");
 
-  const result = await c.env.DB.prepare(
-    "SELECT id, name, description, created_by, created_at, updated_at FROM graphs WHERE created_by = ? ORDER BY created_at DESC",
+  let pagination;
+  try {
+    pagination = parsePaginationParams(new URL(c.req.url).searchParams);
+  } catch (e) {
+    if (e instanceof PaginationError) return errorResponse(c, 400, e.message);
+    throw e;
+  }
+
+  const countResult = await c.env.DB.prepare(
+    "SELECT COUNT(*) as total FROM graphs WHERE created_by = ?",
   )
     .bind(user.id)
+    .first<{ total: number }>();
+
+  const total = countResult?.total ?? 0;
+
+  const result = await c.env.DB.prepare(
+    "SELECT id, name, description, created_by, created_at, updated_at FROM graphs WHERE created_by = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  )
+    .bind(user.id, pagination.limit, pagination.offset)
     .all();
 
-  return c.json({ data: result.results });
+  return c.json({
+    data: result.results,
+    pagination: {
+      total,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      has_more: pagination.offset + pagination.limit < total,
+    },
+  });
 });
 
 // All routes below require graph ownership

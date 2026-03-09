@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { generateId } from "../lib/id.js";
 import { errorResponse } from "../lib/errors.js";
-import { validateEntityData, type FieldDefinition } from "@lattice/shared";
+import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam } from "@lattice/shared";
+import { buildFilterClauses } from "../lib/filter-sql.js";
 import type { Bindings } from "../index.js";
 
 type EdgeRow = {
@@ -165,32 +166,84 @@ edges.post("/", async (c) => {
   );
 });
 
-// GET / — list edges (optionally filtered by type)
+// GET / — list edges (optionally filtered by type, sorted/filtered by field)
 edges.get("/", async (c) => {
   const graph = c.get("graph");
   const type = c.req.query("type");
+  const searchParams = new URL(c.req.url).searchParams;
 
-  let result;
-  if (type) {
-    result = await c.env.DB.prepare(
-      "SELECT id, graph_id, edge_type_id, source_node_id, target_node_id, data, created_at, updated_at FROM edges WHERE graph_id = ? AND edge_type_id = ? ORDER BY created_at ASC",
-    )
-      .bind(graph.id, type)
-      .all<EdgeRow>();
-  } else {
-    result = await c.env.DB.prepare(
-      "SELECT id, graph_id, edge_type_id, source_node_id, target_node_id, data, created_at, updated_at FROM edges WHERE graph_id = ? ORDER BY created_at ASC",
-    )
-      .bind(graph.id)
-      .all<EdgeRow>();
+  let pagination;
+  let sort;
+  let filters: FilterParam[] = [];
+  try {
+    pagination = parsePaginationParams(searchParams);
+
+    const hasSort = searchParams.has("sort");
+    const hasFilters = [...searchParams.keys()].some((k) => k.startsWith("filter["));
+
+    if ((hasSort || hasFilters) && !type) {
+      return errorResponse(c, 400, "sort and filter require a type filter");
+    }
+
+    if (type) {
+      const fieldRows = await c.env.DB.prepare(
+        "SELECT slug, field_type FROM edge_type_fields WHERE edge_type_id = ?",
+      )
+        .bind(type)
+        .all<{ slug: string; field_type: string }>();
+      const validSlugs = new Set(fieldRows.results.map((r) => r.slug));
+      const fieldMap = new Map(fieldRows.results.map((r) => [r.slug, r.field_type as FieldType]));
+      sort = parseSortParam(searchParams, validSlugs);
+      filters = parseFilterParams(searchParams, fieldMap);
+    }
+  } catch (e) {
+    if (e instanceof PaginationError) return errorResponse(c, 400, e.message);
+    throw e;
   }
+
+  const whereParts = type
+    ? ["graph_id = ?", "edge_type_id = ?"]
+    : ["graph_id = ?"];
+  const bindArgs: unknown[] = type ? [graph.id, type] : [graph.id];
+
+  const { clauses: filterClauses, values: filterValues } = buildFilterClauses(filters);
+  whereParts.push(...filterClauses);
+  bindArgs.push(...filterValues);
+
+  const whereClause = `WHERE ${whereParts.join(" AND ")}`;
+
+  const countResult = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total FROM edges ${whereClause}`,
+  )
+    .bind(...bindArgs)
+    .first<{ total: number }>();
+
+  const total = countResult?.total ?? 0;
+
+  const orderClause = sort
+    ? `ORDER BY json_extract(data, '$."${sort.field}"') ${sort.direction}, id ${sort.direction}`
+    : "ORDER BY created_at ASC";
+
+  const result = await c.env.DB.prepare(
+    `SELECT id, graph_id, edge_type_id, source_node_id, target_node_id, data, created_at, updated_at FROM edges ${whereClause} ${orderClause} LIMIT ? OFFSET ?`,
+  )
+    .bind(...bindArgs, pagination.limit, pagination.offset)
+    .all<EdgeRow>();
 
   const edges_list = result.results.map((row) => ({
     ...row,
     data: JSON.parse(row.data),
   }));
 
-  return c.json({ data: edges_list });
+  return c.json({
+    data: edges_list,
+    pagination: {
+      total,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      has_more: pagination.offset + pagination.limit < total,
+    },
+  });
 });
 
 // GET /:edgeId — get single edge

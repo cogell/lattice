@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { generateId } from "../lib/id.js";
 import { errorResponse } from "../lib/errors.js";
-import { validateEntityData, type FieldDefinition } from "@lattice/shared";
+import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam } from "@lattice/shared";
+import { buildFilterClauses } from "../lib/filter-sql.js";
 import type { Bindings } from "../index.js";
 
 type NodeRow = {
@@ -96,32 +97,86 @@ nodes.post("/", async (c) => {
   );
 });
 
-// GET / — list nodes (optionally filtered by type)
+// GET / — list nodes (optionally filtered by type, sorted/filtered by field)
 nodes.get("/", async (c) => {
   const graph = c.get("graph");
   const type = c.req.query("type");
+  const searchParams = new URL(c.req.url).searchParams;
 
-  let result;
-  if (type) {
-    result = await c.env.DB.prepare(
-      "SELECT id, graph_id, node_type_id, data, created_at, updated_at FROM nodes WHERE graph_id = ? AND node_type_id = ? ORDER BY created_at ASC",
-    )
-      .bind(graph.id, type)
-      .all<NodeRow>();
-  } else {
-    result = await c.env.DB.prepare(
-      "SELECT id, graph_id, node_type_id, data, created_at, updated_at FROM nodes WHERE graph_id = ? ORDER BY created_at ASC",
-    )
-      .bind(graph.id)
-      .all<NodeRow>();
+  let pagination;
+  let sort;
+  let filters: FilterParam[] = [];
+  try {
+    pagination = parsePaginationParams(searchParams);
+
+    // Sorting and filtering require a type filter so field slugs can be validated
+    const hasSort = searchParams.has("sort");
+    const hasFilters = [...searchParams.keys()].some((k) => k.startsWith("filter["));
+
+    if ((hasSort || hasFilters) && !type) {
+      return errorResponse(c, 400, "sort and filter require a type filter");
+    }
+
+    if (type) {
+      const fieldRows = await c.env.DB.prepare(
+        "SELECT slug, field_type FROM node_type_fields WHERE node_type_id = ?",
+      )
+        .bind(type)
+        .all<{ slug: string; field_type: string }>();
+      const validSlugs = new Set(fieldRows.results.map((r) => r.slug));
+      const fieldMap = new Map(fieldRows.results.map((r) => [r.slug, r.field_type as FieldType]));
+      sort = parseSortParam(searchParams, validSlugs);
+      filters = parseFilterParams(searchParams, fieldMap);
+    }
+  } catch (e) {
+    if (e instanceof PaginationError) return errorResponse(c, 400, e.message);
+    throw e;
   }
+
+  const whereParts = type
+    ? ["graph_id = ?", "node_type_id = ?"]
+    : ["graph_id = ?"];
+  const bindArgs: unknown[] = type ? [graph.id, type] : [graph.id];
+
+  // Add filter clauses
+  const { clauses: filterClauses, values: filterValues } = buildFilterClauses(filters);
+  whereParts.push(...filterClauses);
+  bindArgs.push(...filterValues);
+
+  const whereClause = `WHERE ${whereParts.join(" AND ")}`;
+
+  const countResult = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total FROM nodes ${whereClause}`,
+  )
+    .bind(...bindArgs)
+    .first<{ total: number }>();
+
+  const total = countResult?.total ?? 0;
+
+  const orderClause = sort
+    ? `ORDER BY json_extract(data, '$."${sort.field}"') ${sort.direction}, id ${sort.direction}`
+    : "ORDER BY created_at ASC";
+
+  const result = await c.env.DB.prepare(
+    `SELECT id, graph_id, node_type_id, data, created_at, updated_at FROM nodes ${whereClause} ${orderClause} LIMIT ? OFFSET ?`,
+  )
+    .bind(...bindArgs, pagination.limit, pagination.offset)
+    .all<NodeRow>();
 
   const nodes_list = result.results.map((row) => ({
     ...row,
     data: JSON.parse(row.data),
   }));
 
-  return c.json({ data: nodes_list });
+  return c.json({
+    data: nodes_list,
+    pagination: {
+      total,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      has_more: pagination.offset + pagination.limit < total,
+    },
+  });
 });
 
 // GET /:nodeId — get single node

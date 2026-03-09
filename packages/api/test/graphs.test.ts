@@ -26,12 +26,17 @@ async function createGraph(data: { name?: string; description?: string } = {}) {
   };
 }
 
+type PaginationMeta = { total: number; limit: number; offset: number; has_more: boolean };
+
 // Helper: list graphs
-async function listGraphs() {
-  const res = await SELF.fetch("http://localhost/api/v1/graphs");
+async function listGraphs(params?: string) {
+  const url = params
+    ? `http://localhost/api/v1/graphs?${params}`
+    : "http://localhost/api/v1/graphs";
+  const res = await SELF.fetch(url);
   return {
     status: res.status,
-    body: await res.json<{ data: GraphData[] }>(),
+    body: await res.json<{ data: GraphData[]; pagination: PaginationMeta }>(),
   };
 }
 
