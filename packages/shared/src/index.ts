@@ -5,4 +5,13 @@ export {
   fieldTypeSchema,
 } from "./field-types.js";
 
-export { createApiClient } from "./api-client.js";
+export {
+  graphSchema,
+  createGraphSchema,
+  updateGraphSchema,
+  type Graph,
+  type CreateGraphInput,
+  type UpdateGraphInput,
+} from "./graphs.js";
+
+export { createApiClient, ApiError } from "./api-client.js";

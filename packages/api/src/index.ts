@@ -3,6 +3,7 @@ import { health } from "./routes/health.js";
 import { createAuth } from "./auth.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { tokens } from "./routes/tokens.js";
+import { graphs } from "./routes/graphs.js";
 
 export type Bindings = {
   DB: D1Database;
@@ -31,6 +32,7 @@ const protectedApi = new Hono<{ Bindings: Bindings }>();
 protectedApi.use("*", authMiddleware);
 protectedApi.get("/me", (c) => c.json({ data: c.get("user") }));
 protectedApi.route("/settings/tokens", tokens);
+protectedApi.route("/graphs", graphs);
 
 api.route("/", protectedApi);
 
