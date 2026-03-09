@@ -1,0 +1,4 @@
+DEV_AUTH_BYPASS=true
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+BETTER_AUTH_SECRET=dev-secret-change-in-production
+AUTH_ORIGIN=http://localhost:8787

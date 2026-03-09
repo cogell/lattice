@@ -2,11 +2,15 @@ account_id = "55664958f74c6a5abefa8406d86334ea"
 name = "lattice-api"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+
+[vars]
+AUTH_ORIGIN = "https://lattice-api.cogell.workers.dev"
 
 [[d1_databases]]
 binding = "DB"

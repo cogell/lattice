@@ -9,7 +9,11 @@
   },
   "dependencies": {
     "@lattice/shared": "workspace:*",
+    "better-auth": "^1.5.4",
     "hono": "^4.12.5",
+    "kysely": "^0.28.11",
+    "kysely-d1": "^0.4.0",
+    "resend": "^6.9.3",
     "ulid-workers": "^2.1.0"
   },
   "devDependencies": {
