@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import { errorResponse } from "../lib/errors.js";
+import type { Bindings } from "../index.js";
 
 export type GraphRow = {
   id: string;
@@ -20,7 +21,7 @@ declare module "hono" {
  * Reusable middleware: loads graph by :graphId, verifies the authenticated
  * user is the owner, and attaches the graph to context.
  */
-export async function graphOwnerMiddleware(c: Context, next: Next) {
+export async function graphOwnerMiddleware(c: Context<{ Bindings: Bindings }>, next: Next) {
   const graphId = c.req.param("graphId");
   const user = c.get("user");
 

@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import { createAuth } from "../auth.js";
 import { errorResponse } from "../lib/errors.js";
+import type { Bindings } from "../index.js";
 
 export type AuthUser = { id: string; email: string; name: string | null };
 
@@ -16,7 +17,7 @@ const DEV_USER: AuthUser = {
   name: "Dev User",
 };
 
-export async function authMiddleware(c: Context, next: Next) {
+export async function authMiddleware(c: Context<{ Bindings: Bindings }>, next: Next) {
   // 1. DEV_AUTH_BYPASS — skip all auth and inject a deterministic dev user
   if (c.env.DEV_AUTH_BYPASS === "true") {
     // Ensure dev user exists in DB so FK constraints (e.g. pat_tokens) work

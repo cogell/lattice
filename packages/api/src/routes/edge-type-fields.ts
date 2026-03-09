@@ -23,20 +23,20 @@ const edgeTypeFields = new Hono<{ Bindings: Bindings }>();
  * Validate that the parent edge type exists in the current graph.
  * Returns the edge type row or null.
  */
-async function getEdgeType(c: any, edgeTypeId: string) {
-  const graph = c.get("graph");
-  return c.env.DB.prepare(
+async function getEdgeType(db: D1Database, graphId: string, edgeTypeId: string) {
+  return db.prepare(
     "SELECT id, graph_id, name, slug FROM edge_types WHERE id = ? AND graph_id = ?",
   )
-    .bind(edgeTypeId, graph.id)
+    .bind(edgeTypeId, graphId)
     .first<{ id: string; graph_id: string; name: string; slug: string }>();
 }
 
 // POST /:edgeTypeId/fields — add a field to an edge type
 edgeTypeFields.post("/", async (c) => {
-  const edgeTypeId = c.req.param("edgeTypeId");
+  const edgeTypeId = c.req.param("edgeTypeId")!;
+  const graph = c.get("graph");
 
-  const edgeType = await getEdgeType(c, edgeTypeId);
+  const edgeType = await getEdgeType(c.env.DB, graph.id, edgeTypeId);
   if (!edgeType) {
     return errorResponse(c, 404, "Edge type not found");
   }
@@ -150,10 +150,11 @@ edgeTypeFields.post("/", async (c) => {
 
 // PATCH /:edgeTypeId/fields/:fieldId — update field
 edgeTypeFields.patch("/:fieldId", async (c) => {
-  const edgeTypeId = c.req.param("edgeTypeId");
+  const edgeTypeId = c.req.param("edgeTypeId")!;
   const fieldId = c.req.param("fieldId");
+  const graph = c.get("graph");
 
-  const edgeType = await getEdgeType(c, edgeTypeId);
+  const edgeType = await getEdgeType(c.env.DB, graph.id, edgeTypeId);
   if (!edgeType) {
     return errorResponse(c, 404, "Edge type not found");
   }
@@ -258,10 +259,11 @@ edgeTypeFields.patch("/:fieldId", async (c) => {
 
 // DELETE /:edgeTypeId/fields/:fieldId — delete field and prune from edge data
 edgeTypeFields.delete("/:fieldId", async (c) => {
-  const edgeTypeId = c.req.param("edgeTypeId");
+  const edgeTypeId = c.req.param("edgeTypeId")!;
   const fieldId = c.req.param("fieldId");
+  const graph = c.get("graph");
 
-  const edgeType = await getEdgeType(c, edgeTypeId);
+  const edgeType = await getEdgeType(c.env.DB, graph.id, edgeTypeId);
   if (!edgeType) {
     return errorResponse(c, 404, "Edge type not found");
   }
