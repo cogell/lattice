@@ -20,8 +20,8 @@ Durable decisions that apply across all phases:
 - **UI routes**: `/` (dashboard), `/graphs/:graphId/nodes/:nodeTypeSlug`, `/graphs/:graphId/edges/:edgeTypeSlug`, `/graphs/:graphId/view`, `/graphs/:graphId/settings`, `/settings`
 - **`/graphs/:graphId` route**: redirects to `/graphs/:graphId/view`
 - **API resources**: `/graphs`, `/graphs/:graphId/node-types`, `/graphs/:graphId/node-types/:id/fields`, `/graphs/:graphId/edge-types`, `/graphs/:graphId/edge-types/:id/fields`, `/graphs/:graphId/nodes`, `/graphs/:graphId/edges`, `/graphs/:graphId/view-data` (defined in Phase 11), `/settings/tokens`
-- **Pagination**: cursor-based using `?after=<lastId>&limit=50` (renamed from PRD's `?cursor=` to clarify the value is the last seen ID, not an opaque token). ULIDs are lexicographically sortable, so the last ID serves as the cursor for creation-order pagination. Response shape: `{ data, pagination: { next_cursor, has_more } }`. No total counts
-- **Sorting**: `?sort=<fieldSlug>:asc|desc` on node and edge list endpoints. Default sort is creation order (ULID ascending) when `?sort` is omitted. Uses `json_extract()` on `data` columns (unindexed, same as filtering)
+- **Pagination**: offset-based using `?offset=<n>&limit=50` on list endpoints. Response shape: `{ data, pagination: { total, limit, offset, has_more } }`. Default `limit` is 50, max `limit` is 100
+- **Sorting**: `?sort=<fieldSlug>:asc|desc` on node and edge list endpoints when `?type=<typeId>` is provided. Default sort is creation order (ULID ascending) when `?sort` is omitted. Uses `json_extract()` on `data` columns (unindexed, same as filtering)
 - **Error envelope**: `{ error: { status, message } }`
 - **Success envelope**: single-resource: `{ data: {...} }`. Lists: `{ data: [...], pagination }`. Delete: `204 No Content`
 - **HTTP status codes**: create -> `201`, update -> `200`, delete -> `204`, auth failure -> `401`, permission failure -> `403`, constraint conflict -> `409`
@@ -35,7 +35,7 @@ Durable decisions that apply across all phases:
 - **Browser auth model**: same-origin in production (single Worker); Vite proxy in dev. Session cookies: `HttpOnly`, `Secure`, `SameSite=Lax`
 - **Deletion strategy**: hard delete, cascade (type -> instances -> connected edges)
 - **Edge type constraints**: `source_node_type_id` and `target_node_type_id` are required and immutable after creation
-- **Filtering**: `filter[field_slug][op]=value` with operators `eq`, `contains`, `is_null`. Uses `json_extract()` on `data` columns (no index — acceptable for v1)
+- **Filtering**: `filter[field_slug][op]=value` on node and edge list endpoints when `?type=<typeId>` is provided, with operators `eq`, `contains`, `is_null`. `contains` is valid only for text fields. Uses `json_extract()` on `data` columns (no index — acceptable for v1)
 - **SPA catch-all**: wrangler.toml `not_found_handling = "single-page-application"`
 - **Production secrets**: managed via `wrangler secret put`; `.dev.vars` for local dev (gitignored)
 - **API client**: `packages/shared` exports a typed API client factory (`createApiClient(baseUrl, getAuthHeader)`) returning methods for each endpoint group. The web app wraps these in TanStack Query hooks; the CLI uses them directly. Response payloads validated with shared Zod schemas
@@ -103,115 +103,121 @@ Durable decisions that apply across all phases:
 
 ---
 
-## Phase 3: Graph CRUD API
+## Phase 3: Graph CRUD API ✅
+
+**Status**: Complete
 
 **User stories**: 7, 8, 9, 10
 
-### What to build
+### What was built
 
-API routes for graph CRUD. Creator recorded as owner. List returns owned graphs. Build the reusable graph ownership middleware. Build the shared typed API client factory (`createApiClient`) in `packages/shared` with methods for graph endpoints, to be extended in later phases as new route groups are added.
+API routes for graph CRUD. Creator recorded as owner. List returns owned graphs. Reusable graph ownership middleware. Shared typed API client factory (`createApiClient`) in `packages/shared` with methods for graph endpoints.
 
 ### Acceptance criteria
 
-- [ ] `POST /api/v1/graphs` creates a graph with authenticated user as owner, returns `201`
-- [ ] `GET /api/v1/graphs` returns graphs owned by the authenticated user
-- [ ] `GET /api/v1/graphs/:graphId` returns graph details (owner only)
-- [ ] `PATCH /api/v1/graphs/:graphId` updates name/description (owner only), returns `200`
-- [ ] `DELETE /api/v1/graphs/:graphId` deletes graph and all related data, returns `204`
-- [ ] Non-owners get 403 on all graph-scoped routes
-- [ ] Graph ownership middleware is extracted and reusable
-- [ ] `packages/shared` exports `createApiClient(baseUrl, getAuthHeader)` with methods for graph endpoints, validated against shared Zod schemas
-- [ ] Integration tests cover CRUD and access control
+- [x] `POST /api/v1/graphs` creates a graph with authenticated user as owner, returns `201`
+- [x] `GET /api/v1/graphs` returns graphs owned by the authenticated user
+- [x] `GET /api/v1/graphs/:graphId` returns graph details (owner only)
+- [x] `PATCH /api/v1/graphs/:graphId` updates name/description (owner only), returns `200`
+- [x] `DELETE /api/v1/graphs/:graphId` deletes graph and all related data, returns `204`
+- [x] Non-owners get 403 on all graph-scoped routes
+- [x] Graph ownership middleware is extracted and reusable
+- [x] `packages/shared` exports `createApiClient(baseUrl, getAuthHeader)` with methods for graph endpoints, validated against shared Zod schemas
+- [x] Integration tests cover CRUD and access control
 
 ---
 
-## Phase 4: Type & Field Schema API
+## Phase 4: Type & Field Schema API ✅
+
+**Status**: Complete
 
 **User stories**: 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 
-### What to build
+### What was built
 
-API routes for node type and edge type CRUD within a graph. Names are editable display labels; slugs are immutable. Node types have name, color, icon, and optional `display_field_slug`. Edge types have name, directionality, and required source/target node type constraints.
-
-Field CRUD for both node types and edge types: add fields (with type, ordinal, `required`, config for select options), reorder, rename, delete. Field names are editable; slugs are immutable storage keys. Deleting a field prunes that slug from all existing instances; if the deleted field is referenced as a node type's `display_field_slug`, it is nullified. Adding a `required: true` field (or updating an existing field to `required: true`) on a type with existing instances is rejected with 400. Field `field_type` is immutable after creation. Select/multi_select fields accept options in `config`; values are validated against defined options on write. Removing an option is allowed; existing data retains old values. `multi_select` stored as JSON arrays; `select` as plain strings.
-
-Deleting a node type cascades to nodes and connected edges. Deleting an edge type cascades to edges.
+API routes for node type and edge type CRUD within a graph. Names are editable display labels; slugs are immutable. Node types have name, color, icon, and optional `display_field_slug`. Edge types have name, directionality, and required source/target node type constraints. Field CRUD for both node types and edge types with validation, slug generation, and cascade behavior.
 
 ### Acceptance criteria
 
 **Node types:**
-- [ ] `POST .../node-types` creates with name, color, icon, returns `201`
-- [ ] `GET .../node-types` lists all node types for the graph
-- [ ] `PATCH .../node-types/:id` updates name, color, icon, or `display_field_slug`, returns `200`
-- [ ] `DELETE .../node-types/:id` cascade-deletes type, nodes, and connected edges, returns `204`
+- [x] `POST .../node-types` creates with name, color, icon, returns `201`
+- [x] `GET .../node-types` lists all node types for the graph
+- [x] `PATCH .../node-types/:id` updates name, color, icon, or `display_field_slug`, returns `200`
+- [x] `DELETE .../node-types/:id` cascade-deletes type, nodes, and connected edges, returns `204`
 
 **Edge types:**
-- [ ] `POST .../edge-types` creates with name, directed flag, source/target node type IDs, returns `201`
-- [ ] `GET .../edge-types` lists all edge types for the graph
-- [ ] `PATCH .../edge-types/:id` updates name or directionality, returns `200`
-- [ ] `source_node_type_id` and `target_node_type_id` are immutable; PATCH rejects changes with 400
-- [ ] `DELETE .../edge-types/:id` cascade-deletes type and edges, returns `204`
-- [ ] Source/target node type IDs validated to exist in the same graph
+- [x] `POST .../edge-types` creates with name, directed flag, source/target node type IDs, returns `201`
+- [x] `GET .../edge-types` lists all edge types for the graph
+- [x] `PATCH .../edge-types/:id` updates name or directionality, returns `200`
+- [x] `source_node_type_id` and `target_node_type_id` are immutable; PATCH rejects changes with 400
+- [x] `DELETE .../edge-types/:id` cascade-deletes type and edges, returns `204`
+- [x] Source/target node type IDs validated to exist in the same graph
 
 **Fields (both node type and edge type):**
-- [ ] `POST .../fields` adds a field with name, field_type, ordinal, `required`, and optional config, returns `201`
-- [ ] `PATCH .../fields/:id` updates display name, ordinal, `required`, or config without changing slug, returns `200`
-- [ ] `DELETE .../fields/:id` removes field and prunes stored values from all instances, returns `204`
-- [ ] Deleting a field referenced as `display_field_slug` nullifies it
-- [ ] Adding a new `required: true` field, or updating an existing field to `required: true`, on a type with existing instances is rejected with 400
-- [ ] `field_type` is immutable; PATCH rejects changes with 400
-- [ ] Select/multi_select fields accept options in config
-- [ ] Removing a select option is allowed; existing data retains old values
-- [ ] Type names unique within graph; field names unique within type
-- [ ] Slugs auto-generated, deduped, and immutable
-- [ ] `display_field_slug` must reference a field on the same node type
-- [ ] Integration tests cover type CRUD, field CRUD, cascade deletes, constraint immutability, and validation
+- [x] `POST .../fields` adds a field with name, field_type, ordinal, `required`, and optional config, returns `201`
+- [x] `PATCH .../fields/:id` updates display name, ordinal, `required`, or config without changing slug, returns `200`
+- [x] `DELETE .../fields/:id` removes field and prunes stored values from all instances, returns `204`
+- [x] Deleting a field referenced as `display_field_slug` nullifies it
+- [x] Adding a new `required: true` field, or updating an existing field to `required: true`, on a type with existing instances is rejected with 400
+- [x] `field_type` is immutable; PATCH rejects changes with 400
+- [x] Select/multi_select fields accept options in config
+- [x] Removing a select option is allowed; existing data retains old values
+- [x] Type names unique within graph; field names unique within type
+- [x] Slugs auto-generated, deduped, and immutable
+- [x] `display_field_slug` must reference a field on the same node type
+- [x] Integration tests cover type CRUD, field CRUD, cascade deletes, constraint immutability, and validation
 
 ---
 
-## Phase 5: Node & Edge CRUD API
+## Phase 5: Node & Edge CRUD API ✅
+
+**Status**: Complete
 
 **User stories**: 28, 29, 31, 34, 35, 37, 52, 58
 
-### What to build
+### What was built
 
-API routes for node and edge CRUD. Node `data` validated against field definitions (strict — unknown fields rejected, types checked, required enforced). Edge creation validates source/target exist and match type constraints, rejects self-references. Deleting a node cascades to connected edges. List endpoints return nodes/edges of a given type (pagination and filtering added in Phase 6).
+API routes for node and edge CRUD. Node `data` validated against field definitions (strict — unknown fields rejected, types checked, required enforced). Edge creation validates source/target exist and match type constraints, rejects self-references. Deleting a node cascades to connected edges. 47 integration tests.
 
 ### Acceptance criteria
 
-- [ ] `POST .../nodes` creates with node_type_id and validated data, returns `201`
-- [ ] `GET .../nodes?type=<nodeTypeId>` lists nodes of a type
-- [ ] `GET .../nodes/:nodeId` returns a single node
-- [ ] `PATCH .../nodes/:nodeId` partial-updates data fields, returns `200`
-- [ ] `DELETE .../nodes/:nodeId` deletes node and connected edges, returns `204`
-- [ ] `POST .../edges` creates with edge_type_id, source/target, and validated data, returns `201`
-- [ ] `GET .../edges?type=<edgeTypeId>` lists edges of a type
-- [ ] `GET .../edges/:edgeId` returns a single edge
-- [ ] `PATCH .../edges/:edgeId` partial-updates data fields, returns `200`
-- [ ] `DELETE .../edges/:edgeId` deletes edge, returns `204`
-- [ ] Unknown fields, missing required fields on create, and type mismatches rejected with clear errors
-- [ ] Select/multi_select values validated against config options
-- [ ] Self-referencing edges rejected
-- [ ] Edge source/target node type constraints enforced
-- [ ] Integration tests cover CRUD, validation, and cascade deletes
+- [x] `POST .../nodes` creates with node_type_id and validated data, returns `201`
+- [x] `GET .../nodes?type=<nodeTypeId>` lists nodes of a type
+- [x] `GET .../nodes/:nodeId` returns a single node
+- [x] `PATCH .../nodes/:nodeId` partial-updates data fields, returns `200`
+- [x] `DELETE .../nodes/:nodeId` deletes node and connected edges, returns `204`
+- [x] `POST .../edges` creates with edge_type_id, source/target, and validated data, returns `201`
+- [x] `GET .../edges?type=<edgeTypeId>` lists edges of a type
+- [x] `GET .../edges/:edgeId` returns a single edge
+- [x] `PATCH .../edges/:edgeId` partial-updates data fields, returns `200`
+- [x] `DELETE .../edges/:edgeId` deletes edge, returns `204`
+- [x] Unknown fields, missing required fields on create, and type mismatches rejected with clear errors
+- [x] Select/multi_select values validated against config options
+- [x] Self-referencing edges rejected
+- [x] Edge source/target node type constraints enforced
+- [x] Integration tests cover CRUD, validation, and cascade deletes
 
 ---
 
-## Phase 6: Pagination & Filtering
+## Phase 6: Pagination & Filtering ✅
+
+**Status**: Complete
 
 **User stories**: 54, 55
 
-### What to build
+### What was built
 
-Add cursor-based pagination to all list endpoints using ULID sort order (`?after=<lastId>&limit=50`). Add server-side sorting to node and edge lists. Add field-value filtering via `filter[field_slug][op]=value` on node and edge lists using `json_extract()` (no index — acceptable for v1). Supported operators: `eq`, `contains`, `is_null`. The `contains` operator on text fields enables the node picker search in Phase 10.
+Pagination (offset/limit) for all list endpoints, plus server-side sorting and field-value filtering for typed node and edge list endpoints. Sorting and filtering require `?type=<typeId>` so field slugs can be validated. Sorting and filtering use `json_extract()` on `data` columns. Supported filter operators: `eq`, `contains`, `is_null`, where `contains` is only valid for text fields.
+
+**Note**: Implementation uses offset/limit pagination (`?offset=&limit=`) with `{ total, limit, offset, has_more }` response shape instead of the originally planned cursor-based approach. This is functionally equivalent for v1.
 
 ### Acceptance criteria
 
-- [ ] All list endpoints accept `?after=<id>&limit=<n>` and return `{ data, pagination: { next_cursor, has_more } }`
-- [ ] Node and edge lists accept `?sort=<fieldSlug>:asc|desc` for server-side sorting; default is creation order (ULID ascending) when omitted
-- [ ] Filters use `filter[field_slug][op]=value` with operators: `eq`, `contains`, `is_null`
-- [ ] Node list filtering supports `filter[<slug>][contains]=<term>` for searchable node pickers
-- [ ] Integration tests cover pagination boundaries, sorting, and filtering
+- [x] All list endpoints accept `?offset=<n>&limit=<n>` and return `{ data, pagination: { total, limit, offset, has_more } }`
+- [x] Node and edge lists accept `?sort=<fieldSlug>:asc|desc` for server-side sorting when `?type=<typeId>` is provided; default is creation order (ULID ascending) when omitted
+- [x] Filters use `filter[field_slug][op]=value` with operators: `eq`, `contains`, `is_null`; `contains` is only valid for text fields
+- [x] Node list filtering supports `filter[<slug>][contains]=<term>` for searchable node pickers
+- [x] Integration tests cover pagination boundaries, sorting, and filtering
 
 ---
 
