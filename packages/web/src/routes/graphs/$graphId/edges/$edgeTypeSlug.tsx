@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, useCallback } from 'react'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { api } from '@/lib/api'
-import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys } from '@/lib/query'
+import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys, nodeTypeFieldKeys } from '@/lib/query'
 import { useEdges, useUpdateEdge } from '@/hooks/use-edges'
 import { useBatchNodes } from '@/hooks/use-nodes'
 import { DataTable } from '@/components/DataTable'
@@ -88,6 +88,29 @@ function EdgeTypeTablePage() {
     enabled: !!edgeType,
   })
 
+  // --- Fetch source and target node type fields for richer labels ---
+  const { data: sourceNodeTypeFields } = useQuery({
+    queryKey: nodeTypeFieldKeys.list(graphId, edgeType?.source_node_type_id ?? ''),
+    queryFn: () => api.listNodeTypeFields(graphId, edgeType!.source_node_type_id),
+    enabled: !!edgeType,
+  })
+
+  const { data: targetNodeTypeFields } = useQuery({
+    queryKey: nodeTypeFieldKeys.list(graphId, edgeType?.target_node_type_id ?? ''),
+    queryFn: () => api.listNodeTypeFields(graphId, edgeType!.target_node_type_id),
+    enabled: !!edgeType,
+  })
+
+  const sourceFieldSlugs = useMemo(() => {
+    if (!sourceNodeTypeFields) return []
+    return [...sourceNodeTypeFields].sort((a, b) => a.ordinal - b.ordinal).map((f) => f.slug)
+  }, [sourceNodeTypeFields])
+
+  const targetFieldSlugs = useMemo(() => {
+    if (!targetNodeTypeFields) return []
+    return [...targetNodeTypeFields].sort((a, b) => a.ordinal - b.ordinal).map((f) => f.slug)
+  }, [targetNodeTypeFields])
+
   // --- Update edge mutation ---
   const updateEdge = useUpdateEdge(graphId)
 
@@ -137,35 +160,49 @@ function EdgeTypeTablePage() {
   // --- Batch-fetch all referenced nodes in a single request ---
   const { nodeMap } = useBatchNodes(graphId, allNodeIds)
 
-  // --- Build nodeId -> display label map ---
+  // --- Build nodeId -> display label map (up to 3 field values) ---
   const nodeDisplayLabels = useMemo(() => {
+    const buildLabel = (
+      node: { data: Record<string, unknown>; id: string },
+      displaySlug: string | null,
+      fieldSlugs: string[],
+    ): string => {
+      if (fieldSlugs.length > 0) {
+        const slugsToTry = displaySlug
+          ? [displaySlug, ...fieldSlugs.filter((s) => s !== displaySlug)]
+          : fieldSlugs
+        const parts: string[] = []
+        for (const slug of slugsToTry) {
+          if (parts.length >= 3) break
+          const val = node.data[slug]
+          if (val != null && String(val).trim() !== '') {
+            parts.push(String(val))
+          }
+        }
+        if (parts.length > 0) return parts.join(' \u2014 ')
+      }
+      if (displaySlug && node.data[displaySlug] != null) {
+        return String(node.data[displaySlug])
+      }
+      return node.id
+    }
+
     const map = new Map<string, string>()
     for (const nodeId of allNodeIds) {
       const node = nodeMap.get(nodeId)
-      if (node) {
-        let displaySlug: string | null = null
-        if (sourceNodeIds.includes(nodeId) && sourceNodeType?.display_field_slug) {
-          displaySlug = sourceNodeType.display_field_slug
-        } else if (targetNodeIds.includes(nodeId) && targetNodeType?.display_field_slug) {
-          displaySlug = targetNodeType.display_field_slug
-        }
-        if (!displaySlug && sourceNodeType?.display_field_slug && node.node_type_id === sourceNodeType?.id) {
-          displaySlug = sourceNodeType.display_field_slug
-        }
-        if (!displaySlug && targetNodeType?.display_field_slug && node.node_type_id === targetNodeType?.id) {
-          displaySlug = targetNodeType.display_field_slug
-        }
-        if (displaySlug && node.data[displaySlug] != null) {
-          map.set(nodeId, String(node.data[displaySlug]))
-        } else {
-          map.set(nodeId, nodeId)
-        }
-      } else {
+      if (!node) {
         map.set(nodeId, nodeId)
+        continue
       }
+      const isSource = sourceNodeIds.includes(nodeId)
+      const displaySlug = isSource
+        ? (sourceNodeType?.display_field_slug ?? null)
+        : (targetNodeType?.display_field_slug ?? null)
+      const fieldSlugs = isSource ? sourceFieldSlugs : targetFieldSlugs
+      map.set(nodeId, buildLabel(node, displaySlug, fieldSlugs))
     }
     return map
-  }, [allNodeIds, nodeMap, sourceNodeType, targetNodeType, sourceNodeIds, targetNodeIds])
+  }, [allNodeIds, nodeMap, sourceNodeType, targetNodeType, sourceNodeIds, targetNodeIds, sourceFieldSlugs, targetFieldSlugs])
 
   // --- Inline edit handler ---
   const handleFieldSave = useCallback(

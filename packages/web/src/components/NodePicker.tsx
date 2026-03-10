@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeKeys, nodeKeys } from '@/lib/query'
+import { nodeTypeKeys, nodeTypeFieldKeys, nodeKeys } from '@/lib/query'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { Node as LatticeNode } from '@lattice/shared'
@@ -45,6 +45,21 @@ export function NodePicker({
 
   const displayFieldSlug = nodeType?.display_field_slug ?? null
 
+  // Fetch node type fields for richer labels (ordered by ordinal)
+  const { data: nodeTypeFields } = useQuery({
+    queryKey: nodeTypeFieldKeys.list(graphId, nodeTypeId),
+    queryFn: () => api.listNodeTypeFields(graphId, nodeTypeId),
+    enabled: !!nodeTypeId,
+  })
+
+  // Ordered field slugs for building summary labels
+  const orderedFieldSlugs = useMemo(() => {
+    if (!nodeTypeFields) return []
+    return [...nodeTypeFields]
+      .sort((a, b) => a.ordinal - b.ordinal)
+      .map((f) => f.slug)
+  }, [nodeTypeFields])
+
   // Build filter for search
   const listOpts = (() => {
     if (!debouncedSearch.trim() || !displayFieldSlug) {
@@ -74,15 +89,32 @@ export function NodePicker({
     enabled: !!value,
   })
 
-  // Get display label for a node
+  // Get display label for a node using up to 3 field values
   const getNodeLabel = useCallback(
     (node: LatticeNode): string => {
+      // Use ordered fields to build a summary from the first 3 non-empty values
+      if (orderedFieldSlugs.length > 0) {
+        const parts: string[] = []
+        // If display field is set, lead with it
+        const slugsToTry = displayFieldSlug
+          ? [displayFieldSlug, ...orderedFieldSlugs.filter((s) => s !== displayFieldSlug)]
+          : orderedFieldSlugs
+        for (const slug of slugsToTry) {
+          if (parts.length >= 3) break
+          const val = node.data[slug]
+          if (val != null && String(val).trim() !== '') {
+            parts.push(String(val))
+          }
+        }
+        if (parts.length > 0) return parts.join(' \u2014 ')
+      }
+      // Fallback: single display field
       if (displayFieldSlug && node.data[displayFieldSlug] != null) {
         return String(node.data[displayFieldSlug])
       }
       return node.id
     },
-    [displayFieldSlug],
+    [displayFieldSlug, orderedFieldSlugs],
   )
 
   // Selected value display
