@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
-import { nodeTypeKeys, nodeTypeFieldKeys, nodeKeys } from '@/lib/query'
+import { nodeTypeKeys, nodeTypeFieldKeys, nodeKeys, viewDataKeys } from '@/lib/query'
 import { useNodes, useUpdateNode } from '@/hooks/use-nodes'
 import { DataTable } from '@/components/DataTable'
 import { EditableCell } from '@/components/EditableCell'
@@ -289,6 +289,7 @@ function NodeTablePage() {
         onOpenChange={setImportOpen}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: nodeKeys.list(graphId, nodeType.id) })
+          queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
         }}
       />
     </div>

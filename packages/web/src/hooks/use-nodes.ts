@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { api } from '@/lib/api'
-import { nodeKeys } from '@/lib/query'
+import { nodeKeys, viewDataKeys } from '@/lib/query'
 import type { ListOptions, CreateNodeInput, UpdateNodeInput, Node } from '@lattice/shared'
 
 export function useNodes(
@@ -31,6 +31,7 @@ export function useCreateNode(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: nodeKeys.list(graphId, variables.node_type_id),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }
@@ -48,6 +49,7 @@ export function useUpdateNode(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: nodeKeys.detail(graphId, variables.nodeId),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }
@@ -62,6 +64,7 @@ export function useDeleteNode(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: nodeKeys.list(graphId, variables.nodeTypeId),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }

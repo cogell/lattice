@@ -6,6 +6,7 @@ import { nodeTypes } from "./node-types.js";
 import { edgeTypes } from "./edge-types.js";
 import { nodes } from "./nodes.js";
 import { edges } from "./edges.js";
+import { viewData } from "./view-data.js";
 import { parsePaginationParams, PaginationError } from "@lattice/shared";
 import type { Bindings } from "../index.js";
 
@@ -128,6 +129,7 @@ graphs.route("/:graphId/node-types", nodeTypes);
 graphs.route("/:graphId/edge-types", edgeTypes);
 graphs.route("/:graphId/nodes", nodes);
 graphs.route("/:graphId/edges", edges);
+graphs.route("/:graphId/view-data", viewData);
 
 // DELETE /graphs/:graphId — delete graph and all related data (cascade)
 graphs.delete("/:graphId", async (c) => {

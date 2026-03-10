@@ -54,6 +54,10 @@ import {
   type PaginationMeta,
   type FilterOperator,
 } from "./pagination.js";
+import {
+  viewDataResponseSchema,
+  type ViewData,
+} from "./view-data.js";
 
 /** Options for paginated list endpoints. */
 export interface ListOptions {
@@ -505,6 +509,14 @@ export function createApiClient(
         method: "DELETE",
       });
       await parseResponse(res, z.undefined());
+    },
+
+    // --- View Data endpoint (graph visualization) ---
+
+    async getViewData(graphId: string): Promise<ViewData> {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/view-data`);
+      const parsed = await parseResponse(res, viewDataResponseSchema);
+      return parsed.data;
     },
 
     // --- CSV Export / Import endpoints ---

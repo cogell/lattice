@@ -64,3 +64,8 @@ export const edgeKeys = {
   detail: (graphId: string, edgeId: string) =>
     [...edgeKeys.all, graphId, edgeId] as const,
 }
+
+export const viewDataKeys = {
+  all: ['viewData'] as const,
+  detail: (graphId: string) => [...viewDataKeys.all, graphId] as const,
+}

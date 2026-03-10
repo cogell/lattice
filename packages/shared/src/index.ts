@@ -89,6 +89,18 @@ export {
 } from "./validate-data.js";
 
 export {
+  viewDataSchema,
+  viewDataResponseSchema,
+  viewNodeTypeSchema,
+  viewEdgeTypeSchema,
+  viewDataCountsSchema,
+  type ViewData,
+  type ViewNodeType,
+  type ViewEdgeType,
+  type ViewDataCounts,
+} from "./view-data.js";
+
+export {
   buildSlugToNameMap,
   buildNameToSlugMap,
   coerceValue,

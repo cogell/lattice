@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { edgeKeys } from '@/lib/query'
+import { edgeKeys, viewDataKeys } from '@/lib/query'
 import type { ListOptions, CreateEdgeInput, UpdateEdgeInput } from '@lattice/shared'
 
 export function useEdges(
@@ -30,6 +30,7 @@ export function useCreateEdge(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: edgeKeys.list(graphId, variables.edge_type_id),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }
@@ -47,6 +48,7 @@ export function useUpdateEdge(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: edgeKeys.detail(graphId, variables.edgeId),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }
@@ -61,6 +63,7 @@ export function useDeleteEdge(graphId: string) {
       queryClient.invalidateQueries({
         queryKey: edgeKeys.list(graphId, variables.edgeTypeId),
       })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 }

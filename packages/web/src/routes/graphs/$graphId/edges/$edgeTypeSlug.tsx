@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, useCallback } from 'react'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { api } from '@/lib/api'
-import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys, nodeTypeFieldKeys } from '@/lib/query'
+import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys, nodeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { useEdges, useUpdateEdge } from '@/hooks/use-edges'
 import { useBatchNodes } from '@/hooks/use-nodes'
 import { DataTable } from '@/components/DataTable'
@@ -400,6 +400,7 @@ function EdgeTypeTablePage() {
         onOpenChange={setImportOpen}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: edgeKeys.list(graphId, edgeType.id) })
+          queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
         }}
       />
     </div>
