@@ -289,24 +289,26 @@ Schema editor at `/graphs/:graphId/settings` with full CRUD for node types, edge
 
 ---
 
-## Phase 10: Web UI — Node & Edge Table Views
+## Phase 10: Web UI — Node & Edge Table Views ✅
+
+**Status**: Complete
 
 **User stories**: 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39
 
-### What to build
+### What was built
 
-Table views using TanStack Table. Node table at `/graphs/:graphId/nodes/:nodeTypeSlug` with inline editing, server-driven sorting, and filtering. Edge table at `/graphs/:graphId/edges/:edgeTypeSlug` with source/target display labels. Searchable node picker for edge creation using `filter[<slug>][contains]=<term>`. Sidebar nav listing types. Import/export buttons.
+Table views using TanStack Table. Node table at `/graphs/:graphId/nodes/:nodeTypeSlug` with inline editing via EditableCell, server-driven sorting, and field-value filtering. Edge table at `/graphs/:graphId/edges/:edgeTypeSlug` with source/target display labels resolved via batch node fetch endpoint (`POST /nodes/batch`). Searchable node picker with 300ms debounced search for edge creation. Sidebar nav in graph layout listing all node and edge types with icons and colors. CSV import dialog with file validation and export with error handling. 10 new components: DataTable, EditableCell, FieldInput, NodePicker, CreateNodeDialog, DeleteNodeDialog, CreateEdgeDialog (with required field validation), DeleteEdgeDialog, ImportDialog, plus graph layout sidebar. Post-review fixes: memoized query opts, batch node fetch to eliminate N+1 queries, unified `useMatch` for sidebar active state.
 
 ### Acceptance criteria
 
-- [ ] Node table displays columns matching field definitions
-- [ ] User can create, inline-edit, and delete nodes
-- [ ] Node table supports server-side sorting and field-value filtering
-- [ ] Edge table displays source/target labels and custom fields
-- [ ] Edge table supports inline editing, sorting, and filtering
-- [ ] Edge creation uses searchable node picker
-- [ ] Sidebar nav lists all types with links to table views
-- [ ] Import/export buttons for CSV upload/download
+- [x] Node table displays columns matching field definitions
+- [x] User can create, inline-edit, and delete nodes
+- [x] Node table supports server-side sorting and field-value filtering
+- [x] Edge table displays source/target labels and custom fields
+- [x] Edge table supports inline editing, sorting, and filtering
+- [x] Edge creation uses searchable node picker
+- [x] Sidebar nav lists all types with links to table views
+- [x] Import/export buttons for CSV upload/download
 
 ---
 

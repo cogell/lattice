@@ -266,6 +266,18 @@ Data is validated against field definitions: unknown fields rejected, types chec
 
 List nodes. Supports `?type=<nodeTypeId>` filter, pagination, sorting, and filtering.
 
+### `POST /nodes/batch`
+
+Fetch multiple nodes by ID in a single request.
+
+**Body**: `{ "ids": string[] }`
+
+- Max 200 IDs per request
+- All IDs must be non-empty strings
+- Returns only nodes belonging to the graph
+
+**Response**: `200` with `{ "data": [...] }`
+
 ### `GET /nodes/:nodeId`
 
 Get a single node with parsed `data`.
