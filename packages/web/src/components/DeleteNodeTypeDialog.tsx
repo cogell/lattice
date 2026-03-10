@@ -30,7 +30,7 @@ export function DeleteNodeTypeDialog({
   const deleteNodeType = useMutation({
     mutationFn: () => api.deleteNodeType(graphId, nodeType.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: nodeTypeKeys.all })
+      queryClient.invalidateQueries({ queryKey: nodeTypeKeys.list(graphId) })
       onOpenChange(false)
     },
   })

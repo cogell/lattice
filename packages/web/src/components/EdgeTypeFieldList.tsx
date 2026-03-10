@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { edgeTypeFieldKeys } from '@/lib/query'
@@ -32,8 +32,10 @@ export function EdgeTypeFieldList({ graphId, edgeTypeId }: EdgeTypeFieldListProp
   const sortedFields = [...(fields ?? [])].sort((a, b) => a.ordinal - b.ordinal)
 
   const reorder = useMutation({
-    mutationFn: async ({ fieldId, newOrdinal }: { fieldId: string; newOrdinal: number }) => {
-      await api.updateEdgeTypeField(graphId, edgeTypeId, fieldId, { ordinal: newOrdinal })
+    mutationFn: async (swaps: { fieldId: string; newOrdinal: number }[]) => {
+      await Promise.all(
+        swaps.map((s) => api.updateEdgeTypeField(graphId, edgeTypeId, s.fieldId, { ordinal: s.newOrdinal })),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeFieldKeys.list(graphId, edgeTypeId) })
@@ -47,8 +49,10 @@ export function EdgeTypeFieldList({ graphId, edgeTypeId }: EdgeTypeFieldListProp
     const field = sortedFields[index]
     const swapField = sortedFields[swapIndex]
 
-    reorder.mutate({ fieldId: field.id, newOrdinal: swapField.ordinal })
-    reorder.mutate({ fieldId: swapField.id, newOrdinal: field.ordinal })
+    reorder.mutate([
+      { fieldId: field.id, newOrdinal: swapField.ordinal },
+      { fieldId: swapField.id, newOrdinal: field.ordinal },
+    ])
   }
 
   if (isLoading) {
@@ -350,10 +354,16 @@ function EditEdgeFieldDialog({
 
   const hasOptions = field.field_type === 'select' || field.field_type === 'multi_select'
 
-  // Reset form when dialog opens
-  if (open) {
-    // handled via key prop or useEffect pattern
-  }
+  useEffect(() => {
+    if (open) {
+      setName(field.name)
+      setRequired(!!field.required)
+      setOptions(
+        (field.config as Record<string, unknown>)?.options as string[] ?? [],
+      )
+      setNewOption('')
+    }
+  }, [open, field])
 
   const updateField = useMutation({
     mutationFn: () =>

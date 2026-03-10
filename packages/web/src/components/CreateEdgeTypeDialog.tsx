@@ -42,7 +42,7 @@ export function CreateEdgeTypeDialog({
         target_node_type_id: targetNodeTypeId,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.all })
+      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
       setOpen(false)
       setName('')
       setDirected(true)

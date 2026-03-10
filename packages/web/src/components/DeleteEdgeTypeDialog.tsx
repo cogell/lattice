@@ -30,7 +30,7 @@ export function DeleteEdgeTypeDialog({
   const deleteEdgeType = useMutation({
     mutationFn: () => api.deleteEdgeType(graphId, edgeType.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.all })
+      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
       onOpenChange(false)
     },
   })

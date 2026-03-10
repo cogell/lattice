@@ -43,7 +43,7 @@ export function EditEdgeTypeDialog({
     mutationFn: () =>
       api.updateEdgeType(graphId, edgeType.id, { name, directed }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.all })
+      queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
       onOpenChange(false)
     },
   })

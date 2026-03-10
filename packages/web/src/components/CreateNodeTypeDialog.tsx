@@ -42,7 +42,7 @@ export function CreateNodeTypeDialog({
   const createNodeType = useMutation({
     mutationFn: () => api.createNodeType(graphId, { name, color, icon }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: nodeTypeKeys.all })
+      queryClient.invalidateQueries({ queryKey: nodeTypeKeys.list(graphId) })
       setOpen(false)
       setName('')
       setColor(COLOR_PALETTE[0])

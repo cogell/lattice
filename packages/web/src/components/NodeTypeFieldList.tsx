@@ -24,8 +24,10 @@ export function NodeTypeFieldList({ graphId, nodeTypeId }: NodeTypeFieldListProp
   const sortedFields = [...(fields ?? [])].sort((a, b) => a.ordinal - b.ordinal)
 
   const reorder = useMutation({
-    mutationFn: async ({ fieldId, newOrdinal }: { fieldId: string; newOrdinal: number }) => {
-      await api.updateNodeTypeField(graphId, nodeTypeId, fieldId, { ordinal: newOrdinal })
+    mutationFn: async (swaps: { fieldId: string; newOrdinal: number }[]) => {
+      await Promise.all(
+        swaps.map((s) => api.updateNodeTypeField(graphId, nodeTypeId, s.fieldId, { ordinal: s.newOrdinal })),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeFieldKeys.list(graphId, nodeTypeId) })
@@ -39,9 +41,10 @@ export function NodeTypeFieldList({ graphId, nodeTypeId }: NodeTypeFieldListProp
     const field = sortedFields[index]
     const swapField = sortedFields[swapIndex]
 
-    // Swap ordinals
-    reorder.mutate({ fieldId: field.id, newOrdinal: swapField.ordinal })
-    reorder.mutate({ fieldId: swapField.id, newOrdinal: field.ordinal })
+    reorder.mutate([
+      { fieldId: field.id, newOrdinal: swapField.ordinal },
+      { fieldId: swapField.id, newOrdinal: field.ordinal },
+    ])
   }
 
   if (isLoading) {
