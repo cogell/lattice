@@ -17,6 +17,31 @@ export type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+// DEV_AUTH_BYPASS: intercept get-session so the web frontend can authenticate
+app.get("/api/auth/get-session", (c) => {
+  if (c.env.DEV_AUTH_BYPASS === "true") {
+    return c.json({
+      user: {
+        id: "01AAAAAAAAAAAAAAAAAAAADEV",
+        email: "dev@lattice.local",
+        name: "Dev User",
+        image: null,
+        emailVerified: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      session: {
+        id: "dev-session",
+        userId: "01AAAAAAAAAAAAAAAAAAAADEV",
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+      },
+    });
+  }
+  // Fall through to BetterAuth
+  const auth = createAuth(c.env);
+  return auth.handler(c.req.raw);
+});
+
 // BetterAuth handles sign-in, sign-out, magic link, session management
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   const auth = createAuth(c.env);

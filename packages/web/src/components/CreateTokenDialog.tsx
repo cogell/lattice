@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Copy, Check } from 'lucide-react'
 
-export function CreateTokenDialog({ children }: { children: React.ReactNode }) {
+export function CreateTokenDialog({ children }: { children: React.ReactElement }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState<string | null>(null)
@@ -50,7 +50,7 @@ export function CreateTokenDialog({ children }: { children: React.ReactNode }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogTrigger render={<>{children}</>} />
+      <DialogTrigger render={children} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create API Token</DialogTitle>

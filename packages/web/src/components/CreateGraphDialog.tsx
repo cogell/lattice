@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
-export function CreateGraphDialog({ children }: { children: React.ReactNode }) {
+export function CreateGraphDialog({ children }: { children: React.ReactElement }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -33,7 +33,7 @@ export function CreateGraphDialog({ children }: { children: React.ReactNode }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<>{children}</>} />
+      <DialogTrigger render={children} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create Graph</DialogTitle>
