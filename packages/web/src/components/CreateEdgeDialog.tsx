@@ -28,6 +28,7 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
   const [sourceNodeId, setSourceNodeId] = useState<string | null>(null)
   const [targetNodeId, setTargetNodeId] = useState<string | null>(null)
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({})
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
   const createEdge = useCreateEdge(graphId)
 
@@ -44,6 +45,27 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
     setSourceNodeId(null)
     setTargetNodeId(null)
     setFieldValues({})
+    setValidationErrors({})
+  }
+
+  function validate(): boolean {
+    const errors: Record<string, string> = {}
+    if (!sourceNodeId) {
+      errors['_source'] = 'Source Node is required'
+    }
+    if (!targetNodeId) {
+      errors['_target'] = 'Target Node is required'
+    }
+    for (const field of sortedFields) {
+      if (field.required) {
+        const val = fieldValues[field.slug]
+        if (val === undefined || val === null || val === '') {
+          errors[field.slug] = `${field.name} is required`
+        }
+      }
+    }
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -55,6 +77,7 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!validate()) return
     if (!sourceNodeId || !targetNodeId) return
 
     createEdge.mutate(
@@ -94,6 +117,11 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
               onChange={setSourceNodeId}
               placeholder="Search source nodes..."
             />
+            {validationErrors['_source'] && (
+              <p className="text-xs text-destructive">
+                {validationErrors['_source']}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -107,6 +135,11 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
               onChange={setTargetNodeId}
               placeholder="Search target nodes..."
             />
+            {validationErrors['_target'] && (
+              <p className="text-xs text-destructive">
+                {validationErrors['_target']}
+              </p>
+            )}
           </div>
 
           {sortedFields.map((field) => (
@@ -122,6 +155,11 @@ export function CreateEdgeDialog({ graphId, edgeType, children }: CreateEdgeDial
                   setFieldValues((prev) => ({ ...prev, [field.slug]: val }))
                 }
               />
+              {validationErrors[field.slug] && (
+                <p className="text-xs text-destructive">
+                  {validationErrors[field.slug]}
+                </p>
+              )}
             </div>
           ))}
 

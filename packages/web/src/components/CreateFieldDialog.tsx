@@ -75,7 +75,7 @@ export function CreateFieldDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<>{children}</>} />
+      <DialogTrigger render={children} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Field</DialogTitle>

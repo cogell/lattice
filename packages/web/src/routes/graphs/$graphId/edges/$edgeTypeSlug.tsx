@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, useCallback } from 'react'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { api } from '@/lib/api'
-import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys, nodeKeys } from '@/lib/query'
+import { edgeTypeKeys, edgeTypeFieldKeys, edgeKeys, nodeTypeKeys } from '@/lib/query'
 import { useEdges, useUpdateEdge } from '@/hooks/use-edges'
+import { useBatchNodes } from '@/hooks/use-nodes'
 import { DataTable } from '@/components/DataTable'
 import { EditableCell } from '@/components/EditableCell'
 import { CreateEdgeDialog } from '@/components/CreateEdgeDialog'
@@ -18,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Download, MoreVertical, Plus, Trash2, Upload } from 'lucide-react'
-import type { Edge, Node as LatticeNode, EdgeTypeField } from '@lattice/shared'
+import type { Edge, EdgeTypeField } from '@lattice/shared'
 
 export const Route = createFileRoute('/graphs/$graphId/edges/$edgeTypeSlug')({
   component: EdgeTypeTablePage,
@@ -133,23 +134,15 @@ function EdgeTypeTablePage() {
     return Array.from(combined)
   }, [sourceNodeIds, targetNodeIds])
 
-  // --- Fetch each node individually (cached by TanStack Query) ---
-  const nodeQueries = useQueries({
-    queries: allNodeIds.map((nodeId) => ({
-      queryKey: nodeKeys.detail(graphId, nodeId),
-      queryFn: () => api.getNode(graphId, nodeId),
-      staleTime: 60_000,
-    })),
-  })
+  // --- Batch-fetch all referenced nodes in a single request ---
+  const { nodeMap } = useBatchNodes(graphId, allNodeIds)
 
   // --- Build nodeId -> display label map ---
   const nodeDisplayLabels = useMemo(() => {
     const map = new Map<string, string>()
-    for (let i = 0; i < allNodeIds.length; i++) {
-      const nodeId = allNodeIds[i]
-      const query = nodeQueries[i]
-      if (query.data) {
-        const node = query.data as LatticeNode
+    for (const nodeId of allNodeIds) {
+      const node = nodeMap.get(nodeId)
+      if (node) {
         let displaySlug: string | null = null
         if (sourceNodeIds.includes(nodeId) && sourceNodeType?.display_field_slug) {
           displaySlug = sourceNodeType.display_field_slug
@@ -172,7 +165,7 @@ function EdgeTypeTablePage() {
       }
     }
     return map
-  }, [allNodeIds, nodeQueries, sourceNodeType, targetNodeType, sourceNodeIds, targetNodeIds])
+  }, [allNodeIds, nodeMap, sourceNodeType, targetNodeType, sourceNodeIds, targetNodeIds])
 
   // --- Inline edit handler ---
   const handleFieldSave = useCallback(
@@ -298,13 +291,18 @@ function EdgeTypeTablePage() {
   }
 
   const handleExport = async () => {
-    const blob = await api.exportEdges(graphId, edgeType.id)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${edgeType.name}_edges.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const blob = await api.exportEdges(graphId, edgeType.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${edgeType.name}_edges.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export edges:', error)
+      window.alert('Failed to export edges. Please try again.')
+    }
   }
 
   return (

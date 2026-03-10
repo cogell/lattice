@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Link, useMatch, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Outlet, Link, useMatch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { requireAuth } from '@/lib/auth-guard'
 import { api } from '@/lib/api'
@@ -157,9 +157,8 @@ function NodeTypeNavLink({
   graphId: string
   nodeType: NodeType
 }) {
-  const location = useLocation()
-  const targetPath = `/graphs/${graphId}/nodes/${nodeType.slug}`
-  const isActive = location.pathname === targetPath
+  const match = useMatch({ from: '/graphs/$graphId/nodes/$nodeTypeSlug', shouldThrow: false })
+  const isActive = !!match && match.params.nodeTypeSlug === nodeType.slug
 
   const ResolvedIcon = resolveLucideIcon(nodeType.icon)
 
@@ -190,9 +189,8 @@ function EdgeTypeNavLink({
   graphId: string
   edgeType: EdgeType
 }) {
-  const location = useLocation()
-  const targetPath = `/graphs/${graphId}/edges/${edgeType.slug}`
-  const isActive = location.pathname === targetPath
+  const match = useMatch({ from: '/graphs/$graphId/edges/$edgeTypeSlug', shouldThrow: false })
+  const isActive = !!match && match.params.edgeTypeSlug === edgeType.slug
 
   return (
     <Link

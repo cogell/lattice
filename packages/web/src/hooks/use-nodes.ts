@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { api } from '@/lib/api'
 import { nodeKeys } from '@/lib/query'
-import type { ListOptions, CreateNodeInput, UpdateNodeInput } from '@lattice/shared'
+import type { ListOptions, CreateNodeInput, UpdateNodeInput, Node } from '@lattice/shared'
 
 export function useNodes(
   graphId: string,
@@ -63,4 +64,34 @@ export function useDeleteNode(graphId: string) {
       })
     },
   })
+}
+
+/** Fetch multiple nodes by ID in a single request. */
+export function useBatchNodes(graphId: string, nodeIds: string[]) {
+  const sortedIds = useMemo(() => nodeIds.slice().sort(), [nodeIds])
+  const enabled = sortedIds.length > 0
+
+  const query = useQuery({
+    queryKey: nodeKeys.batch(graphId, sortedIds),
+    queryFn: () => api.batchGetNodes(graphId, sortedIds),
+    enabled,
+    staleTime: 60_000,
+  })
+
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, Node>()
+    if (query.data) {
+      for (const node of query.data) {
+        map.set(node.id, node)
+      }
+    }
+    return map
+  }, [query.data])
+
+  return {
+    data: query.data,
+    nodeMap,
+    isLoading: query.isLoading,
+    error: query.error,
+  }
 }

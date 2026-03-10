@@ -78,16 +78,16 @@ function NodeTablePage() {
   }, [filterValue, fields])
 
   // --- Fetch nodes ---
+  const listOpts = useMemo(
+    () => ({ limit, offset, sort: sortParam, filters: filterParams }),
+    [limit, offset, sortParam, filterParams],
+  )
+
   const {
     data: nodes,
     pagination: nodesPagination,
     isLoading: nodesLoading,
-  } = useNodes(graphId, nodeType?.id ?? '', {
-    limit,
-    offset,
-    sort: sortParam,
-    filters: filterParams,
-  })
+  } = useNodes(graphId, nodeType?.id ?? '', listOpts)
 
   // --- Mutations ---
   const updateNode = useUpdateNode(graphId)
@@ -102,13 +102,18 @@ function NodeTablePage() {
   // --- Export handler ---
   const handleExport = useCallback(async () => {
     if (!nodeType) return
-    const blob = await api.exportNodes(graphId, nodeType.id)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${nodeType.name}_nodes.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const blob = await api.exportNodes(graphId, nodeType.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${nodeType.name}_nodes.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export nodes:', error)
+      window.alert('Failed to export nodes. Please try again.')
+    }
   }, [graphId, nodeType])
 
   // --- Build columns from field definitions ---

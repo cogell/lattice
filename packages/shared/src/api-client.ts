@@ -409,6 +409,16 @@ export function createApiClient(
       return parsed.data;
     },
 
+    async batchGetNodes(graphId: string, ids: string[]): Promise<Node[]> {
+      if (ids.length === 0) return [];
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/batch`, {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      const parsed = await parseResponse(res, dataWrapper(z.array(nodeSchema)));
+      return parsed.data;
+    },
+
     async updateNode(graphId: string, nodeId: string, input: UpdateNodeInput): Promise<Node> {
       const body = updateNodeSchema.parse(input);
       const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {

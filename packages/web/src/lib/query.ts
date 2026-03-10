@@ -53,6 +53,8 @@ export const nodeKeys = {
     [...nodeKeys.all, 'list', graphId, nodeTypeId] as const,
   detail: (graphId: string, nodeId: string) =>
     [...nodeKeys.all, graphId, nodeId] as const,
+  batch: (graphId: string, ids: string[]) =>
+    [...nodeKeys.all, 'batch', graphId, ...ids.slice().sort()] as const,
 }
 
 export const edgeKeys = {

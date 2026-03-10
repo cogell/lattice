@@ -355,6 +355,39 @@ nodes.post("/import", async (c) => {
   return c.json({ data: { imported: parsed.rows.length } }, 201);
 });
 
+// POST /batch — fetch multiple nodes by ID
+nodes.post("/batch", async (c) => {
+  const graph = c.get("graph");
+  const body = await c.req.json<{ ids?: string[] }>();
+
+  if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+    return errorResponse(c, 400, "ids array is required and must not be empty");
+  }
+
+  if (body.ids.length > 200) {
+    return errorResponse(c, 400, "Maximum of 200 node IDs per batch request");
+  }
+
+  // Validate all IDs are strings
+  if (!body.ids.every((id) => typeof id === "string" && id.length > 0)) {
+    return errorResponse(c, 400, "All IDs must be non-empty strings");
+  }
+
+  const placeholders = body.ids.map(() => "?").join(", ");
+  const result = await c.env.DB.prepare(
+    `SELECT id, graph_id, node_type_id, data, created_at, updated_at FROM nodes WHERE graph_id = ? AND id IN (${placeholders})`,
+  )
+    .bind(graph.id, ...body.ids)
+    .all<NodeRow>();
+
+  const nodes_list = result.results.map((row) => ({
+    ...row,
+    data: JSON.parse(row.data),
+  }));
+
+  return c.json({ data: nodes_list });
+});
+
 // GET /:nodeId — get single node
 nodes.get("/:nodeId", async (c) => {
   const graph = c.get("graph");
