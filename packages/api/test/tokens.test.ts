@@ -1,6 +1,6 @@
 import { env, SELF } from "cloudflare:test";
-import { describe, it, expect, beforeEach } from "vitest";
-import "../src/index";
+import { describe, it, expect } from "vitest";
+import app from "../src/index";
 
 // Helper to create a token via API (uses DEV_AUTH_BYPASS)
 async function createToken(name: string) {
@@ -31,6 +31,34 @@ async function listTokens() {
       }>;
     }>(),
   };
+}
+
+function createExecutionContextStub() {
+  const tasks: Promise<unknown>[] = [];
+  const executionCtx = {
+    waitUntil(promise: Promise<unknown>) {
+      tasks.push(promise);
+    },
+    passThroughOnException() {},
+  } as ExecutionContext;
+
+  return {
+    executionCtx,
+    async waitForTasks() {
+      await Promise.all(tasks);
+    },
+  };
+}
+
+async function requestWithoutBypass(path: string, init?: RequestInit) {
+  const ctx = createExecutionContextStub();
+  const response = await app.request(
+    `http://localhost${path}`,
+    init,
+    { ...env, DEV_AUTH_BYPASS: "false" },
+    ctx.executionCtx,
+  );
+  return { response, waitForTasks: ctx.waitForTasks };
 }
 
 // Helper to delete a token
@@ -75,7 +103,7 @@ describe("PAT token CRUD", () => {
     await createToken("list-test");
     const { status, body } = await listTokens();
     expect(status).toBe(200);
-    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data).toHaveLength(1);
     const token = body.data.find((t) => t.name === "list-test");
     expect(token).toBeTruthy();
     // Ensure no hash or raw token in response
@@ -104,40 +132,52 @@ describe("PAT token CRUD", () => {
 });
 
 describe("Bearer auth", () => {
-  it("valid Bearer token authenticates request", async () => {
+  it("valid Bearer token authenticates request when DEV_AUTH_BYPASS is disabled", async () => {
     const { body } = await createToken("bearer-test");
     const rawToken = body.data.token;
 
-    const res = await SELF.fetch("http://localhost/api/v1/me", {
+    const { response, waitForTasks } = await requestWithoutBypass("/api/v1/me", {
       headers: { Authorization: `Bearer ${rawToken}` },
     });
-    // With DEV_AUTH_BYPASS=true, the bypass matches first.
-    // The test still validates the full pipeline works.
-    expect(res.status).toBe(200);
-    const meBody = await res.json<{ data: { id: string; email: string } }>();
-    expect(meBody.data.email).toBeTruthy();
+    expect(response.status).toBe(200);
+    const meBody = await response.json<{ data: { id: string; email: string } }>();
+    expect(meBody.data.id).toBe("01AAAAAAAAAAAAAAAAAAAADEV");
+    expect(meBody.data.email).toBe("dev@lattice.local");
+    await waitForTasks();
   });
 
-  it("garbage Bearer token returns 200 under DEV_AUTH_BYPASS", async () => {
-    // Under DEV_AUTH_BYPASS, even bad tokens succeed because bypass is checked first.
-    // This test documents that behavior — real Bearer auth is tested via
-    // direct DB inserts when DEV_AUTH_BYPASS is false (production path).
-    const res = await SELF.fetch("http://localhost/api/v1/me", {
+  it("invalid Bearer token returns 401 when DEV_AUTH_BYPASS is disabled", async () => {
+    const { response } = await requestWithoutBypass("/api/v1/me", {
       headers: { Authorization: "Bearer garbage_token" },
     });
-    expect(res.status).toBe(200);
+    expect(response.status).toBe(401);
+    const body = await response.json<{ error: { status: number; message: string } }>();
+    expect(body.error.message).toBe("Authentication required");
   });
 
-  it("successful Bearer auth updates last_used_at", async () => {
-    // Create token and hash it, then insert directly to test Bearer path
-    // without DEV_AUTH_BYPASS interference. Since the test env has
-    // DEV_AUTH_BYPASS=true, we verify last_used_at via the list endpoint
-    // after using the token (the bypass path doesn't update last_used_at).
+  it("successful Bearer auth updates last_used_at when DEV_AUTH_BYPASS is disabled", async () => {
     const { body } = await createToken("last-used-test");
+    const tokenId = body.data.id;
 
-    // List and check initial last_used_at is null
-    const { body: before } = await listTokens();
-    const tokenBefore = before.data.find((t) => t.id === body.data.id);
-    expect(tokenBefore?.last_used_at).toBeNull();
+    const before = await env.DB.prepare(
+      "SELECT last_used_at FROM pat_tokens WHERE id = ?",
+    )
+      .bind(tokenId)
+      .first<{ last_used_at: string | null }>();
+    expect(before?.last_used_at).toBeNull();
+
+    const { response, waitForTasks } = await requestWithoutBypass("/api/v1/me", {
+      headers: { Authorization: `Bearer ${body.data.token}` },
+    });
+    expect(response.status).toBe(200);
+
+    await waitForTasks();
+
+    const after = await env.DB.prepare(
+      "SELECT last_used_at FROM pat_tokens WHERE id = ?",
+    )
+      .bind(tokenId)
+      .first<{ last_used_at: string | null }>();
+    expect(after?.last_used_at).toBeTruthy();
   });
 });

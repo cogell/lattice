@@ -1,5 +1,5 @@
 import { env, SELF } from "cloudflare:test";
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import "../src/index";
 
 type NodeTypeData = {
@@ -104,7 +104,7 @@ async function deleteNodeType(graphId: string, nodeTypeId: string) {
 describe("Node Type CRUD", () => {
   let graphId: string;
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     graphId = await createGraph("Node Type Test Graph");
   });
 
@@ -181,12 +181,11 @@ describe("Node Type CRUD", () => {
   });
 
   it("GET lists all node types for graph (200)", async () => {
-    // Create a node type to ensure there's at least one
     await createNodeType(graphId, { name: "ListTestType" });
 
     const { status, body } = await listNodeTypes(graphId);
     expect(status).toBe(200);
-    expect(body.data.length).toBeGreaterThanOrEqual(1);
+    expect(body.data).toHaveLength(1);
     const names = body.data.map((nt) => nt.name);
     expect(names).toContain("ListTestType");
   });

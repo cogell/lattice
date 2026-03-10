@@ -404,8 +404,7 @@ describe("Edge CRUD", () => {
     const { status, body } = await listEdges(graphId);
     expect(status).toBe(200);
     expect(Array.isArray(body.data)).toBe(true);
-    // The graph already has the setup nodes; we created 2 edges
-    expect(body.data.length).toBeGreaterThanOrEqual(2);
+    expect(body.data).toHaveLength(2);
   });
 
   it("GET with ?type= filters by edge_type_id", async () => {

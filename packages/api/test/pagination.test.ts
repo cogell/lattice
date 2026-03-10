@@ -125,20 +125,17 @@ describe("Pagination — Graphs", () => {
   });
 
   it("walks all pages via offset", async () => {
-    // Create a fresh isolated set by using unique names and collecting IDs
-    const graphIds: string[] = [];
-    for (let i = 0; i < 3; i++) graphIds.push(await createGraph(`walk-${uid()}`));
+    for (let i = 0; i < 3; i++) await createGraph(`walk-${uid()}`);
 
-    // Walk with limit=2
     const page1 = await fetchList("http://localhost/api/v1/graphs?limit=2&offset=0");
     const p1 = page1.body as { data: unknown[]; pagination: PaginationMeta };
     expect(p1.data.length).toBe(2);
     expect(p1.pagination.has_more).toBe(true);
+    expect(p1.pagination.total).toBe(3);
 
     const page2 = await fetchList(`http://localhost/api/v1/graphs?limit=2&offset=2`);
     const p2 = page2.body as { data: unknown[]; pagination: PaginationMeta };
-    expect(p2.data.length).toBeGreaterThanOrEqual(1);
-    // All items from both pages should be accounted for
+    expect(p2.data.length).toBe(1);
     expect(p1.pagination.total).toBe(p2.pagination.total);
   });
 

@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { beforeAll } from "vitest";
+import { beforeAll, beforeEach } from "vitest";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_better_auth.sql?raw";
 
@@ -22,4 +22,16 @@ beforeAll(async () => {
     ...splitStatements(migration0002),
   ];
   await env.DB.batch(statements.map((s) => env.DB.prepare(s)));
+});
+
+// Keep integration tests isolated so assertions do not depend on leaked state.
+beforeEach(async () => {
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM verification"),
+    env.DB.prepare("DELETE FROM account"),
+    env.DB.prepare("DELETE FROM sessions"),
+    env.DB.prepare("DELETE FROM pat_tokens"),
+    env.DB.prepare("DELETE FROM graphs"),
+    env.DB.prepare("DELETE FROM users"),
+  ]);
 });

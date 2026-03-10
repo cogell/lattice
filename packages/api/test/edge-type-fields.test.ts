@@ -1,5 +1,5 @@
 import { env, SELF } from "cloudflare:test";
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import "../src/index";
 
 type FieldData = {
@@ -109,8 +109,8 @@ async function deleteField(gId: string, etId: string, fieldId: string) {
   );
 }
 
-// Set up shared graph, node types, and edge type before all tests
-beforeAll(async () => {
+// Recreate the base fixture for each test so suites stay isolated.
+beforeEach(async () => {
   graphId = await createGraph("ETF Test Graph");
   sourceNodeTypeId = "nt-etf-source";
   targetNodeTypeId = "nt-etf-target";
