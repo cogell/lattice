@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { edgeTypeKeys, nodeTypeKeys } from '@/lib/query'
+import { edgeTypeKeys, nodeTypeKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -43,6 +43,7 @@ export function CreateEdgeTypeDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       setOpen(false)
       setName('')
       setDirected(true)

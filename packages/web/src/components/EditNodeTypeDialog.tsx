@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeKeys, nodeTypeFieldKeys } from '@/lib/query'
+import { nodeTypeKeys, nodeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -57,6 +57,7 @@ export function EditNodeTypeDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeKeys.list(graphId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })

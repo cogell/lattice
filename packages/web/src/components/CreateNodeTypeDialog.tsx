@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeKeys } from '@/lib/query'
+import { nodeTypeKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -43,6 +43,7 @@ export function CreateNodeTypeDialog({
     mutationFn: () => api.createNodeType(graphId, { name, color, icon }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeKeys.list(graphId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       setOpen(false)
       setName('')
       setColor(COLOR_PALETTE[0])

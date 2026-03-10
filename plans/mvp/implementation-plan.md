@@ -312,23 +312,25 @@ Table views using TanStack Table. Node table at `/graphs/:graphId/nodes/:nodeTyp
 
 ---
 
-## Phase 11: Web UI — Graph Visualization
+## Phase 11: Web UI — Graph Visualization ✅
+
+**Status**: Complete
 
 **User stories**: 40, 41, 42, 43, 44, 45, 46
 
-### What to build
+### What was built
 
-`GET /api/v1/graphs/:graphId/view-data` returns all nodes and edges un-paginated, capped at 1,000 nodes / 5,000 edges (with `truncated: true` if exceeded). Graph view at `/graphs/:graphId/view` using React Flow + dagre auto-layout. Nodes colored by type with icons. Directed edges show arrows. Hover tooltips for nodes and edges. Re-layout on data changes.
+`GET /api/v1/graphs/:graphId/view-data` endpoint returns all nodes and edges un-paginated, capped at 1,000 nodes / 5,000 edges (with `truncated: true` flag when exceeded). Graph view at `/graphs/:graphId/view` using React Flow v12 + dagre auto-layout. Custom `GraphNode` component renders nodes colored by type with Lucide icons and display-field labels. Custom `GraphEdge` component renders directed edges with arrows and undirected edges with plain lines. Hover tooltips show field values for nodes and type + fields for edges. View-data query invalidation wired into all node/edge CRUD mutations so the canvas stays in sync. Truncation banner warns when the graph exceeds caps. Shared Zod schemas and API client method for view-data in `packages/shared`. 19 integration tests for the view-data endpoint covering pagination caps, truncation, empty graphs, and edge inclusion.
 
 ### Acceptance criteria
 
-- [ ] View-data endpoint returns all nodes/edges capped at 1,000/5,000 with truncation flag
-- [ ] Nodes and edges render with dagre auto-layout
-- [ ] Nodes colored with icons by type
-- [ ] Directed edges show arrows; undirected show plain lines
-- [ ] Hover shows field values (nodes) and type + fields (edges)
-- [ ] Pan and zoom work smoothly
-- [ ] Data changes trigger re-layout
+- [x] View-data endpoint returns all nodes/edges capped at 1,000/5,000 with truncation flag
+- [x] Nodes and edges render with dagre auto-layout
+- [x] Nodes colored with icons by type
+- [x] Directed edges show arrows; undirected show plain lines
+- [x] Hover shows field values (nodes) and type + fields (edges)
+- [x] Pan and zoom work smoothly
+- [x] Data changes trigger re-layout
 
 ---
 

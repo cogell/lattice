@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeFieldKeys } from '@/lib/query'
+import { nodeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { CreateFieldDialog } from '@/components/CreateFieldDialog'
 import { EditFieldDialog } from '@/components/EditFieldDialog'
@@ -31,6 +31,7 @@ export function NodeTypeFieldList({ graphId, nodeTypeId }: NodeTypeFieldListProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeFieldKeys.list(graphId, nodeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 

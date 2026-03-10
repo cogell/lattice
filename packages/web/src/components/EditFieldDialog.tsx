@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeFieldKeys } from '@/lib/query'
+import { nodeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -59,6 +59,7 @@ export function EditFieldDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeFieldKeys.list(graphId, nodeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })

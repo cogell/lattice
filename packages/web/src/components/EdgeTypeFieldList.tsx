@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { edgeTypeFieldKeys } from '@/lib/query'
+import { edgeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { FIELD_TYPES } from '@lattice/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +39,7 @@ export function EdgeTypeFieldList({ graphId, edgeTypeId }: EdgeTypeFieldListProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeFieldKeys.list(graphId, edgeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
     },
   })
 
@@ -215,6 +216,7 @@ function CreateEdgeFieldDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeFieldKeys.list(graphId, edgeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       setOpen(false)
       setName('')
       setFieldType('text')
@@ -379,6 +381,7 @@ function EditEdgeFieldDialog({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeFieldKeys.list(graphId, edgeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })
@@ -491,6 +494,7 @@ function DeleteEdgeFieldDialog({
     mutationFn: () => api.deleteEdgeTypeField(graphId, edgeTypeId, field.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeFieldKeys.list(graphId, edgeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })

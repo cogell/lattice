@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { edgeTypeKeys } from '@/lib/query'
+import { edgeTypeKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -44,6 +44,7 @@ export function EditEdgeTypeDialog({
       api.updateEdgeType(graphId, edgeType.id, { name, directed }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })

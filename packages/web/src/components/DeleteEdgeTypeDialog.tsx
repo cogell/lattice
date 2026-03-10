@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { edgeTypeKeys } from '@/lib/query'
+import { edgeTypeKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,6 +31,7 @@ export function DeleteEdgeTypeDialog({
     mutationFn: () => api.deleteEdgeType(graphId, edgeType.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { nodeTypeFieldKeys } from '@/lib/query'
+import { nodeTypeFieldKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,6 +33,7 @@ export function DeleteFieldDialog({
     mutationFn: () => api.deleteNodeTypeField(graphId, nodeTypeId, field.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: nodeTypeFieldKeys.list(graphId, nodeTypeId) })
+      queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       onOpenChange(false)
     },
   })
