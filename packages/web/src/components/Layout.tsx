@@ -16,12 +16,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <Settings className="h-5 w-5" />
         </Link>
       </header>
-      <div className="flex flex-1 overflow-hidden">
-        <aside className="hidden w-56 shrink-0 border-r md:block">
-          {/* Sidebar slot — graph navigation will go here */}
-        </aside>
-        <main className="flex-1 overflow-auto">{children}</main>
-      </div>
+      <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
     </div>
   )
 }

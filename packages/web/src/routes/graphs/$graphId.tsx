@@ -112,7 +112,7 @@ function GraphLayout() {
               ))}
           </SidebarSection>
         </nav>
-        <div className="flex-1 overflow-auto">
+        <div className="flex flex-1 flex-col overflow-hidden">
           <Outlet />
         </div>
       </div>
