@@ -6,7 +6,6 @@ export function useViewData(graphId: string) {
   const query = useQuery({
     queryKey: viewDataKeys.detail(graphId),
     queryFn: () => api.getViewData(graphId),
-    staleTime: 30_000,
   })
 
   return {

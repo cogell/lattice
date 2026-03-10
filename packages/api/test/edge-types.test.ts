@@ -144,7 +144,7 @@ describe("Edge Type CRUD", () => {
     const data = (body as { data: EdgeTypeData }).data;
     expect(data.name).toBe("Works At");
     expect(data.slug).toBe("works_at");
-    expect(data.directed).toBe(1); // default true
+    expect(data.directed).toBe(true); // default true
     expect(data.source_node_type_id).toBe(sourceNodeTypeId);
     expect(data.target_node_type_id).toBe(targetNodeTypeId);
     expect(data.graph_id).toBe(graphId);
@@ -243,7 +243,7 @@ describe("Edge Type CRUD", () => {
       target_node_type_id: targetNodeTypeId,
     });
     const data1 = (body1 as { data: EdgeTypeData }).data;
-    expect(data1.directed).toBe(1);
+    expect(data1.directed).toBe(true);
 
     // Explicitly false
     const { body: body2 } = await createEdgeType(graphId, {
@@ -253,7 +253,7 @@ describe("Edge Type CRUD", () => {
       target_node_type_id: targetNodeTypeId,
     });
     const data2 = (body2 as { data: EdgeTypeData }).data;
-    expect(data2.directed).toBe(0);
+    expect(data2.directed).toBe(false);
   });
 
   // --- GET (list) ---
@@ -340,14 +340,14 @@ describe("Edge Type CRUD", () => {
       target_node_type_id: targetNodeTypeId,
     });
     const createdData = (created as { data: EdgeTypeData }).data;
-    expect(createdData.directed).toBe(1);
+    expect(createdData.directed).toBe(true);
 
     const { status, body } = await updateEdgeType(graphId, createdData.id, {
       directed: false,
     });
     expect(status).toBe(200);
     const data = (body as { data: EdgeTypeData }).data;
-    expect(data.directed).toBe(0);
+    expect(data.directed).toBe(false);
   });
 
   it("PATCH rejects changing source_node_type_id (400)", async () => {

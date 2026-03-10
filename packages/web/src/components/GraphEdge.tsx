@@ -6,6 +6,7 @@ import {
   type EdgeProps,
   type Edge,
 } from '@xyflow/react'
+import { formatFieldValue, type FieldMeta } from '@/lib/format-field'
 
 export interface GraphEdgeData extends Record<string, unknown> {
   directed: boolean
@@ -13,24 +14,10 @@ export interface GraphEdgeData extends Record<string, unknown> {
   /** Actual field values keyed by slug */
   fields: Record<string, unknown>
   /** Field definitions for displaying human-readable labels */
-  fieldMeta: Array<{ name: string; slug: string; field_type: string }>
+  fieldMeta: FieldMeta[]
 }
 
 export type GraphEdgeType = Edge<GraphEdgeData, 'graphEdge'>
-
-/** Format a field value for display based on its type. */
-function formatFieldValue(value: unknown, fieldType: string): string {
-  if (value === null || value === undefined || value === '') return '\u2014'
-  if (fieldType === 'boolean') return value ? 'Yes' : 'No'
-  if (fieldType === 'json') {
-    try {
-      return typeof value === 'string' ? value : JSON.stringify(value)
-    } catch {
-      return String(value)
-    }
-  }
-  return String(value)
-}
 
 function GraphEdgeComponent({
   sourceX,

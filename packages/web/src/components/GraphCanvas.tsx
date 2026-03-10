@@ -70,8 +70,7 @@ export function GraphCanvas({ viewData }: GraphCanvasProps) {
     const rfEdges: Edge<GraphEdgeData>[] = viewData.edges.map((edge) => {
       const edgeType = edgeTypeMap.get(edge.edge_type_id)
 
-      // The `directed` field comes from SQLite as a number (0/1); coerce to boolean
-      const directed = Boolean(edgeType?.directed)
+      const directed = edgeType?.directed ?? false
 
       const data: GraphEdgeData = {
         directed,

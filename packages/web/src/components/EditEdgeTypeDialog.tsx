@@ -29,13 +29,13 @@ export function EditEdgeTypeDialog({
   onOpenChange,
 }: EditEdgeTypeDialogProps) {
   const [name, setName] = useState(edgeType.name)
-  const [directed, setDirected] = useState(Boolean(edgeType.directed))
+  const [directed, setDirected] = useState(edgeType.directed)
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (open) {
       setName(edgeType.name)
-      setDirected(Boolean(edgeType.directed))
+      setDirected(edgeType.directed)
     }
   }, [open, edgeType])
 

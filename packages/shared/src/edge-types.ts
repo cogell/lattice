@@ -19,7 +19,7 @@ export const edgeTypeSchema = z.object({
   graph_id: z.string(),
   name: z.string(),
   slug: z.string(),
-  directed: z.number(), // SQLite stores booleans as 0/1
+  directed: z.boolean(),
   source_node_type_id: z.string(),
   target_node_type_id: z.string(),
   created_at: z.string(),

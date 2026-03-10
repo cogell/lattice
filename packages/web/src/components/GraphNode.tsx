@@ -3,13 +3,9 @@ import { createPortal } from 'react-dom'
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import type { LucideIcon } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
+import { formatFieldValue, type FieldMeta } from '@/lib/format-field'
 
-/** Metadata describing a single field definition for display in the tooltip. */
-export interface FieldMeta {
-  name: string
-  slug: string
-  field_type: string
-}
+export type { FieldMeta }
 
 export type GraphNodeData = {
   label: string
@@ -35,13 +31,6 @@ function resolveLucideIcon(name?: string): LucideIcon | null {
     .join('')
   const icon = (LucideIcons as Record<string, unknown>)[pascalName]
   return typeof icon === 'function' ? (icon as LucideIcon) : null
-}
-
-/** Format a field value for display based on its type. */
-function formatFieldValue(value: unknown, fieldType: string): string {
-  if (value === null || value === undefined) return '\u2014'
-  if (fieldType === 'boolean') return value ? 'Yes' : 'No'
-  return String(value)
 }
 
 function GraphNodeComponent({ data }: NodeProps<GraphNodeType>) {

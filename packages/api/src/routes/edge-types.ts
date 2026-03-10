@@ -102,7 +102,7 @@ edgeTypes.post("/", async (c) => {
         graph_id: graph.id,
         name,
         slug,
-        directed: directed ? 1 : 0,
+        directed: !!directed,
         source_node_type_id: body.source_node_type_id,
         target_node_type_id: body.target_node_type_id,
         created_at: now,
@@ -112,6 +112,11 @@ edgeTypes.post("/", async (c) => {
     201,
   );
 });
+
+/** Coerce SQLite integer booleans in an EdgeTypeRow to proper booleans. */
+function formatEdgeType(row: EdgeTypeRow) {
+  return { ...row, directed: row.directed === 1 };
+}
 
 // GET / — list all edge types for the graph
 edgeTypes.get("/", async (c) => {
@@ -123,7 +128,7 @@ edgeTypes.get("/", async (c) => {
     .bind(graph.id)
     .all<EdgeTypeRow>();
 
-  return c.json({ data: result.results });
+  return c.json({ data: result.results.map(formatEdgeType) });
 });
 
 // GET /:edgeTypeId — get single edge type
@@ -141,7 +146,7 @@ edgeTypes.get("/:edgeTypeId", async (c) => {
     return errorResponse(c, 404, "Edge type not found");
   }
 
-  return c.json({ data: edgeType });
+  return c.json({ data: formatEdgeType(edgeType) });
 });
 
 // PATCH /:edgeTypeId — update name or directed flag only
@@ -205,7 +210,7 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
       graph_id: edgeType.graph_id,
       name,
       slug: edgeType.slug,
-      directed,
+      directed: directed === 1,
       source_node_type_id: edgeType.source_node_type_id,
       target_node_type_id: edgeType.target_node_type_id,
       created_at: edgeType.created_at,
