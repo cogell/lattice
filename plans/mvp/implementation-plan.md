@@ -243,24 +243,26 @@ CSV export endpoints return all nodes/edges of a type as downloadable CSV (heade
 
 ---
 
-## Phase 8: Web UI — Auth, Dashboard & Graph Management
+## Phase 8: Web UI — Auth, Dashboard & Graph Management ✅
+
+**Status**: Complete
 
 **User stories**: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 
-### What to build
+### What was built
 
-Set up the React SPA with Vite, TanStack Router, Tailwind, and shadcn/ui. App shell with header bar (app name, graph selector, settings link). Auth pages (magic link). Dashboard at `/` with graph list and create/edit/delete. `/graphs/:graphId` redirects to `/graphs/:graphId/view`. Settings page at `/settings` with PAT token management. Graph settings page shell at `/graphs/:graphId/settings`.
+React SPA with Vite, TanStack Router, Tailwind CSS, and base-ui (shadcn/ui). App shell with header (Lattice logo, settings gear) and sidebar slot. Auth flow using BetterAuth magic link with sign-in and callback pages. Route guards redirect unauthenticated users to sign-in. Dashboard at `/` with responsive graph card grid (create, edit, delete via dropdown menus). Graph detail layout at `/graphs/:graphId` with View/Settings tabs and breadcrumb nav. User settings page at `/settings` with account info and PAT token management (create with show-once pattern, revoke). Shared API client from `packages/shared` wrapped in TanStack Query hooks. DEV_AUTH_BYPASS extended to cover `/api/auth/get-session` for local frontend development.
 
 ### Acceptance criteria
 
-- [ ] App shell renders header bar with navigation
-- [ ] Magic link sign-in/sign-up works in browser
-- [ ] Unauthenticated users redirected to sign-in
-- [ ] Dashboard lists owned graphs
-- [ ] User can create, edit, and delete graphs
-- [ ] `/graphs/:graphId` redirects to `/graphs/:graphId/view`
-- [ ] Graph settings page renders a shell (schema editor added in Phase 9)
-- [ ] User settings page shows PAT tokens with create/revoke
+- [x] App shell renders header bar with navigation
+- [x] Magic link sign-in/sign-up works in browser
+- [x] Unauthenticated users redirected to sign-in
+- [x] Dashboard lists owned graphs
+- [x] User can create, edit, and delete graphs
+- [x] `/graphs/:graphId` redirects to `/graphs/:graphId/view`
+- [x] Graph settings page renders a shell (schema editor added in Phase 9)
+- [x] User settings page shows PAT tokens with create/revoke
 
 ---
 

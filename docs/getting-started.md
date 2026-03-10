@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - pnpm
 - Wrangler CLI (`pnpm add -g wrangler`)
 
