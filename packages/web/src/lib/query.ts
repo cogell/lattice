@@ -46,3 +46,19 @@ export const edgeTypeFieldKeys = {
   list: (graphId: string, edgeTypeId: string) =>
     [...edgeTypeFieldKeys.all, 'list', graphId, edgeTypeId] as const,
 }
+
+export const nodeKeys = {
+  all: ['nodes'] as const,
+  list: (graphId: string, nodeTypeId: string) =>
+    [...nodeKeys.all, 'list', graphId, nodeTypeId] as const,
+  detail: (graphId: string, nodeId: string) =>
+    [...nodeKeys.all, graphId, nodeId] as const,
+}
+
+export const edgeKeys = {
+  all: ['edges'] as const,
+  list: (graphId: string, edgeTypeId: string) =>
+    [...edgeKeys.all, 'list', graphId, edgeTypeId] as const,
+  detail: (graphId: string, edgeId: string) =>
+    [...edgeKeys.all, graphId, edgeId] as const,
+}

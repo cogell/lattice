@@ -17,6 +17,8 @@ import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as GraphsGraphIdIndexRouteImport } from './routes/graphs/$graphId/index'
 import { Route as GraphsGraphIdViewRouteImport } from './routes/graphs/$graphId/view'
 import { Route as GraphsGraphIdSettingsRouteImport } from './routes/graphs/$graphId/settings'
+import { Route as GraphsGraphIdNodesNodeTypeSlugRouteImport } from './routes/graphs/$graphId/nodes/$nodeTypeSlug'
+import { Route as GraphsGraphIdEdgesEdgeTypeSlugRouteImport } from './routes/graphs/$graphId/edges/$edgeTypeSlug'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -58,6 +60,18 @@ const GraphsGraphIdSettingsRoute = GraphsGraphIdSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => GraphsGraphIdRoute,
 } as any)
+const GraphsGraphIdNodesNodeTypeSlugRoute =
+  GraphsGraphIdNodesNodeTypeSlugRouteImport.update({
+    id: '/nodes/$nodeTypeSlug',
+    path: '/nodes/$nodeTypeSlug',
+    getParentRoute: () => GraphsGraphIdRoute,
+  } as any)
+const GraphsGraphIdEdgesEdgeTypeSlugRoute =
+  GraphsGraphIdEdgesEdgeTypeSlugRouteImport.update({
+    id: '/edges/$edgeTypeSlug',
+    path: '/edges/$edgeTypeSlug',
+    getParentRoute: () => GraphsGraphIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +82,8 @@ export interface FileRoutesByFullPath {
   '/graphs/$graphId/settings': typeof GraphsGraphIdSettingsRoute
   '/graphs/$graphId/view': typeof GraphsGraphIdViewRoute
   '/graphs/$graphId/': typeof GraphsGraphIdIndexRoute
+  '/graphs/$graphId/edges/$edgeTypeSlug': typeof GraphsGraphIdEdgesEdgeTypeSlugRoute
+  '/graphs/$graphId/nodes/$nodeTypeSlug': typeof GraphsGraphIdNodesNodeTypeSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,6 +93,8 @@ export interface FileRoutesByTo {
   '/graphs/$graphId/settings': typeof GraphsGraphIdSettingsRoute
   '/graphs/$graphId/view': typeof GraphsGraphIdViewRoute
   '/graphs/$graphId': typeof GraphsGraphIdIndexRoute
+  '/graphs/$graphId/edges/$edgeTypeSlug': typeof GraphsGraphIdEdgesEdgeTypeSlugRoute
+  '/graphs/$graphId/nodes/$nodeTypeSlug': typeof GraphsGraphIdNodesNodeTypeSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,6 +106,8 @@ export interface FileRoutesById {
   '/graphs/$graphId/settings': typeof GraphsGraphIdSettingsRoute
   '/graphs/$graphId/view': typeof GraphsGraphIdViewRoute
   '/graphs/$graphId/': typeof GraphsGraphIdIndexRoute
+  '/graphs/$graphId/edges/$edgeTypeSlug': typeof GraphsGraphIdEdgesEdgeTypeSlugRoute
+  '/graphs/$graphId/nodes/$nodeTypeSlug': typeof GraphsGraphIdNodesNodeTypeSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,6 +120,8 @@ export interface FileRouteTypes {
     | '/graphs/$graphId/settings'
     | '/graphs/$graphId/view'
     | '/graphs/$graphId/'
+    | '/graphs/$graphId/edges/$edgeTypeSlug'
+    | '/graphs/$graphId/nodes/$nodeTypeSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,6 +131,8 @@ export interface FileRouteTypes {
     | '/graphs/$graphId/settings'
     | '/graphs/$graphId/view'
     | '/graphs/$graphId'
+    | '/graphs/$graphId/edges/$edgeTypeSlug'
+    | '/graphs/$graphId/nodes/$nodeTypeSlug'
   id:
     | '__root__'
     | '/'
@@ -119,6 +143,8 @@ export interface FileRouteTypes {
     | '/graphs/$graphId/settings'
     | '/graphs/$graphId/view'
     | '/graphs/$graphId/'
+    | '/graphs/$graphId/edges/$edgeTypeSlug'
+    | '/graphs/$graphId/nodes/$nodeTypeSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -187,6 +213,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GraphsGraphIdSettingsRouteImport
       parentRoute: typeof GraphsGraphIdRoute
     }
+    '/graphs/$graphId/nodes/$nodeTypeSlug': {
+      id: '/graphs/$graphId/nodes/$nodeTypeSlug'
+      path: '/nodes/$nodeTypeSlug'
+      fullPath: '/graphs/$graphId/nodes/$nodeTypeSlug'
+      preLoaderRoute: typeof GraphsGraphIdNodesNodeTypeSlugRouteImport
+      parentRoute: typeof GraphsGraphIdRoute
+    }
+    '/graphs/$graphId/edges/$edgeTypeSlug': {
+      id: '/graphs/$graphId/edges/$edgeTypeSlug'
+      path: '/edges/$edgeTypeSlug'
+      fullPath: '/graphs/$graphId/edges/$edgeTypeSlug'
+      preLoaderRoute: typeof GraphsGraphIdEdgesEdgeTypeSlugRouteImport
+      parentRoute: typeof GraphsGraphIdRoute
+    }
   }
 }
 
@@ -194,12 +234,16 @@ interface GraphsGraphIdRouteChildren {
   GraphsGraphIdSettingsRoute: typeof GraphsGraphIdSettingsRoute
   GraphsGraphIdViewRoute: typeof GraphsGraphIdViewRoute
   GraphsGraphIdIndexRoute: typeof GraphsGraphIdIndexRoute
+  GraphsGraphIdEdgesEdgeTypeSlugRoute: typeof GraphsGraphIdEdgesEdgeTypeSlugRoute
+  GraphsGraphIdNodesNodeTypeSlugRoute: typeof GraphsGraphIdNodesNodeTypeSlugRoute
 }
 
 const GraphsGraphIdRouteChildren: GraphsGraphIdRouteChildren = {
   GraphsGraphIdSettingsRoute: GraphsGraphIdSettingsRoute,
   GraphsGraphIdViewRoute: GraphsGraphIdViewRoute,
   GraphsGraphIdIndexRoute: GraphsGraphIdIndexRoute,
+  GraphsGraphIdEdgesEdgeTypeSlugRoute: GraphsGraphIdEdgesEdgeTypeSlugRoute,
+  GraphsGraphIdNodesNodeTypeSlugRoute: GraphsGraphIdNodesNodeTypeSlugRoute,
 }
 
 const GraphsGraphIdRouteWithChildren = GraphsGraphIdRoute._addFileChildren(

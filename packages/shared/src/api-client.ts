@@ -496,6 +496,58 @@ export function createApiClient(
       });
       await parseResponse(res, z.undefined());
     },
+
+    // --- CSV Export / Import endpoints ---
+
+    async exportNodes(graphId: string, nodeTypeId: string): Promise<Blob> {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/export?type=${nodeTypeId}`);
+      if (!res.ok) throw new ApiError(res.status, `Export failed: HTTP ${res.status}`);
+      return res.blob();
+    },
+
+    async importNodes(graphId: string, nodeTypeId: string, file: File): Promise<{ count: number }> {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/import?type=${nodeTypeId}`, {
+        method: "POST",
+        headers: { Authorization: getAuthHeader() },
+        body: form,
+        ...fetchInit,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const parsed = errorBody.safeParse(body);
+        const message = parsed.success ? parsed.data.error.message : `HTTP ${res.status}`;
+        throw new ApiError(res.status, message);
+      }
+      const json = await res.json();
+      return json.data ?? json;
+    },
+
+    async exportEdges(graphId: string, edgeTypeId: string): Promise<Blob> {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges/export?type=${edgeTypeId}`);
+      if (!res.ok) throw new ApiError(res.status, `Export failed: HTTP ${res.status}`);
+      return res.blob();
+    },
+
+    async importEdges(graphId: string, edgeTypeId: string, file: File): Promise<{ count: number }> {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/import?type=${edgeTypeId}`, {
+        method: "POST",
+        headers: { Authorization: getAuthHeader() },
+        body: form,
+        ...fetchInit,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const parsed = errorBody.safeParse(body);
+        const message = parsed.success ? parsed.data.error.message : `HTTP ${res.status}`;
+        throw new ApiError(res.status, message);
+      }
+      const json = await res.json();
+      return json.data ?? json;
+    },
   };
 }
 
