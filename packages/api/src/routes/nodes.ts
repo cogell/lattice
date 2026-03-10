@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { generateId } from "../lib/id.js";
 import { errorResponse } from "../lib/errors.js";
-import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam } from "@lattice/shared";
+import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam, serializeNodesToCsv, parseNodeImportCsv, CsvParseError } from "@lattice/shared";
 import { buildFilterClauses } from "../lib/filter-sql.js";
 import type { Bindings } from "../index.js";
+
+const MAX_IMPORT_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_IMPORT_ROWS = 5000;
 
 type NodeRow = {
   id: string;
@@ -177,6 +180,179 @@ nodes.get("/", async (c) => {
       has_more: pagination.offset + pagination.limit < total,
     },
   });
+});
+
+// GET /export — export nodes as CSV
+nodes.get("/export", async (c) => {
+  const graph = c.get("graph");
+  const type = c.req.query("type");
+
+  if (!type) {
+    return errorResponse(c, 400, "type query parameter is required");
+  }
+
+  // Validate node type belongs to this graph
+  const nodeType = await c.env.DB.prepare(
+    "SELECT id, name FROM node_types WHERE id = ? AND graph_id = ?",
+  )
+    .bind(type, graph.id)
+    .first<{ id: string; name: string }>();
+
+  if (!nodeType) {
+    return errorResponse(c, 404, "Node type not found in this graph");
+  }
+
+  // Fetch field definitions
+  const fieldRows2 = await c.env.DB.prepare(
+    "SELECT slug, name, field_type, required, config, ordinal FROM node_type_fields WHERE node_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(type)
+    .all<FieldRow & { ordinal: number }>();
+
+  const fields2: (FieldDefinition & { ordinal: number })[] = fieldRows2.results.map((f) => ({
+    slug: f.slug,
+    name: f.name,
+    field_type: f.field_type,
+    required: f.required,
+    config: JSON.parse(f.config || "{}"),
+    ordinal: f.ordinal,
+  }));
+
+  // Fetch all nodes of this type
+  const exportResult = await c.env.DB.prepare(
+    "SELECT id, data FROM nodes WHERE graph_id = ? AND node_type_id = ? ORDER BY created_at ASC",
+  )
+    .bind(graph.id, type)
+    .all<{ id: string; data: string }>();
+
+  const nodesData = exportResult.results.map((row) => ({
+    id: row.id,
+    data: JSON.parse(row.data) as Record<string, unknown>,
+  }));
+
+  const csv = serializeNodesToCsv(nodesData, fields2);
+
+  const filename = `${nodeType.name.replace(/[^a-zA-Z0-9_-]/g, "_")}_nodes.csv`;
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+});
+
+// POST /import — import nodes from CSV
+nodes.post("/import", async (c) => {
+  const graph = c.get("graph");
+  const type = c.req.query("type");
+
+  if (!type) {
+    return errorResponse(c, 400, "type query parameter is required");
+  }
+
+  // Validate node type belongs to this graph
+  const importNodeType = await c.env.DB.prepare(
+    "SELECT id FROM node_types WHERE id = ? AND graph_id = ?",
+  )
+    .bind(type, graph.id)
+    .first();
+
+  if (!importNodeType) {
+    return errorResponse(c, 404, "Node type not found in this graph");
+  }
+
+  // Parse multipart body or raw text
+  let csvText: string;
+  const contentType = c.req.header("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await c.req.formData();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return errorResponse(c, 400, "Missing file in multipart upload");
+    }
+    if (file.size > MAX_IMPORT_SIZE) {
+      return errorResponse(c, 400, `File exceeds maximum size of ${MAX_IMPORT_SIZE / 1024 / 1024} MB`);
+    }
+    csvText = await file.text();
+  } else {
+    csvText = await c.req.text();
+    if (new TextEncoder().encode(csvText).length > MAX_IMPORT_SIZE) {
+      return errorResponse(c, 400, `File exceeds maximum size of ${MAX_IMPORT_SIZE / 1024 / 1024} MB`);
+    }
+  }
+
+  // Fetch field definitions
+  const importFieldRows = await c.env.DB.prepare(
+    "SELECT slug, name, field_type, required, config, ordinal FROM node_type_fields WHERE node_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(type)
+    .all<FieldRow & { ordinal: number }>();
+
+  const importFields: (FieldDefinition & { ordinal: number })[] = importFieldRows.results.map((f) => ({
+    slug: f.slug,
+    name: f.name,
+    field_type: f.field_type,
+    required: f.required,
+    config: JSON.parse(f.config || "{}"),
+    ordinal: f.ordinal,
+  }));
+
+  // Parse CSV
+  let parsed;
+  try {
+    parsed = parseNodeImportCsv(csvText, importFields);
+  } catch (e) {
+    if (e instanceof CsvParseError) {
+      return errorResponse(c, 400, e.message);
+    }
+    throw e;
+  }
+
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    return errorResponse(c, 400, `File exceeds maximum of ${MAX_IMPORT_ROWS} rows`);
+  }
+
+  if (parsed.rows.length === 0) {
+    return errorResponse(c, 400, "CSV file contains no data rows");
+  }
+
+  // Validate all rows, collecting per-row errors
+  const allErrors: Array<{ row: number; field: string; message: string }> = [];
+  for (let i = 0; i < parsed.rows.length; i++) {
+    const validation = validateEntityData(parsed.rows[i].data, importFields);
+    if (!validation.valid) {
+      for (const err of validation.errors) {
+        allErrors.push({ row: i + 1, field: err.field, message: err.message });
+      }
+    }
+  }
+
+  if (allErrors.length > 0) {
+    return c.json(
+      {
+        error: {
+          status: 400,
+          message: "Import validation failed",
+          details: allErrors,
+        },
+      },
+      400,
+    );
+  }
+
+  // Batch insert all nodes
+  const now = new Date().toISOString();
+  const stmts = parsed.rows.map((row) => {
+    const id = generateId();
+    return c.env.DB.prepare(
+      "INSERT INTO nodes (id, graph_id, node_type_id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+    ).bind(id, graph.id, type, JSON.stringify(row.data), now, now);
+  });
+
+  await c.env.DB.batch(stmts);
+
+  return c.json({ data: { imported: parsed.rows.length } }, 201);
 });
 
 // GET /:nodeId — get single node

@@ -87,3 +87,22 @@ export {
   type ValidationResult,
   type ValidateEntityDataOptions,
 } from "./validate-data.js";
+
+export {
+  buildSlugToNameMap,
+  buildNameToSlugMap,
+  coerceValue,
+  serializeValue,
+  parseCsv,
+  unparseCsv,
+  serializeNodesToCsv,
+  serializeEdgesToCsv,
+  parseNodeImportCsv,
+  parseEdgeImportCsv,
+  CsvParseError,
+  type CsvParseResult,
+  type ParsedImportRow,
+  type ImportParseResult,
+  type ParsedEdgeImportRow,
+  type EdgeImportParseResult,
+} from "./csv.js";

@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { generateId } from "../lib/id.js";
 import { errorResponse } from "../lib/errors.js";
-import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam } from "@lattice/shared";
+import { validateEntityData, parsePaginationParams, parseSortParam, parseFilterParams, PaginationError, type FieldDefinition, type FieldType, type FilterParam, serializeEdgesToCsv, parseEdgeImportCsv, CsvParseError } from "@lattice/shared";
 import { buildFilterClauses } from "../lib/filter-sql.js";
 import type { Bindings } from "../index.js";
+
+const MAX_IMPORT_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_IMPORT_ROWS = 5000;
 
 type EdgeRow = {
   id: string;
@@ -244,6 +247,236 @@ edges.get("/", async (c) => {
       has_more: pagination.offset + pagination.limit < total,
     },
   });
+});
+
+// GET /export — export edges as CSV
+edges.get("/export", async (c) => {
+  const graph = c.get("graph");
+  const type = c.req.query("type");
+
+  if (!type) {
+    return errorResponse(c, 400, "type query parameter is required");
+  }
+
+  // Validate edge type belongs to this graph
+  const exportEdgeType = await c.env.DB.prepare(
+    "SELECT id, name FROM edge_types WHERE id = ? AND graph_id = ?",
+  )
+    .bind(type, graph.id)
+    .first<{ id: string; name: string }>();
+
+  if (!exportEdgeType) {
+    return errorResponse(c, 404, "Edge type not found in this graph");
+  }
+
+  // Fetch field definitions
+  const exportFieldRows = await c.env.DB.prepare(
+    "SELECT slug, name, field_type, required, config, ordinal FROM edge_type_fields WHERE edge_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(type)
+    .all<FieldRow & { ordinal: number }>();
+
+  const exportFields: (FieldDefinition & { ordinal: number })[] = exportFieldRows.results.map((f) => ({
+    slug: f.slug,
+    name: f.name,
+    field_type: f.field_type,
+    required: f.required,
+    config: JSON.parse(f.config || "{}"),
+    ordinal: f.ordinal,
+  }));
+
+  // Fetch all edges of this type
+  const exportResult = await c.env.DB.prepare(
+    "SELECT id, source_node_id, target_node_id, data FROM edges WHERE graph_id = ? AND edge_type_id = ? ORDER BY created_at ASC",
+  )
+    .bind(graph.id, type)
+    .all<{ id: string; source_node_id: string; target_node_id: string; data: string }>();
+
+  const edgesData = exportResult.results.map((row) => ({
+    id: row.id,
+    source_node_id: row.source_node_id,
+    target_node_id: row.target_node_id,
+    data: JSON.parse(row.data) as Record<string, unknown>,
+  }));
+
+  const csv = serializeEdgesToCsv(edgesData, exportFields);
+
+  const filename = `${exportEdgeType.name.replace(/[^a-zA-Z0-9_-]/g, "_")}_edges.csv`;
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
+});
+
+// POST /import — import edges from CSV
+edges.post("/import", async (c) => {
+  const graph = c.get("graph");
+  const type = c.req.query("type");
+
+  if (!type) {
+    return errorResponse(c, 400, "type query parameter is required");
+  }
+
+  // Validate edge type belongs to this graph and get constraints
+  const importEdgeType = await c.env.DB.prepare(
+    "SELECT id, source_node_type_id, target_node_type_id FROM edge_types WHERE id = ? AND graph_id = ?",
+  )
+    .bind(type, graph.id)
+    .first<EdgeTypeRow>();
+
+  if (!importEdgeType) {
+    return errorResponse(c, 404, "Edge type not found in this graph");
+  }
+
+  // Parse multipart body or raw text
+  let csvText: string;
+  const contentType = c.req.header("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await c.req.formData();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return errorResponse(c, 400, "Missing file in multipart upload");
+    }
+    if (file.size > MAX_IMPORT_SIZE) {
+      return errorResponse(c, 400, `File exceeds maximum size of ${MAX_IMPORT_SIZE / 1024 / 1024} MB`);
+    }
+    csvText = await file.text();
+  } else {
+    csvText = await c.req.text();
+    if (new TextEncoder().encode(csvText).length > MAX_IMPORT_SIZE) {
+      return errorResponse(c, 400, `File exceeds maximum size of ${MAX_IMPORT_SIZE / 1024 / 1024} MB`);
+    }
+  }
+
+  // Fetch field definitions
+  const importFieldRows = await c.env.DB.prepare(
+    "SELECT slug, name, field_type, required, config, ordinal FROM edge_type_fields WHERE edge_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(type)
+    .all<FieldRow & { ordinal: number }>();
+
+  const importFields: (FieldDefinition & { ordinal: number })[] = importFieldRows.results.map((f) => ({
+    slug: f.slug,
+    name: f.name,
+    field_type: f.field_type,
+    required: f.required,
+    config: JSON.parse(f.config || "{}"),
+    ordinal: f.ordinal,
+  }));
+
+  // Parse CSV
+  let parsed;
+  try {
+    parsed = parseEdgeImportCsv(csvText, importFields);
+  } catch (e) {
+    if (e instanceof CsvParseError) {
+      return errorResponse(c, 400, e.message);
+    }
+    throw e;
+  }
+
+  if (parsed.rows.length > MAX_IMPORT_ROWS) {
+    return errorResponse(c, 400, `File exceeds maximum of ${MAX_IMPORT_ROWS} rows`);
+  }
+
+  if (parsed.rows.length === 0) {
+    return errorResponse(c, 400, "CSV file contains no data rows");
+  }
+
+  // Validate all rows: field data + source/target constraints
+  const allErrors: Array<{ row: number; field: string; message: string }> = [];
+
+  // Collect all unique node IDs to validate in bulk
+  const nodeIds = new Set<string>();
+  for (const row of parsed.rows) {
+    if (row.source_node_id) nodeIds.add(row.source_node_id);
+    if (row.target_node_id) nodeIds.add(row.target_node_id);
+  }
+
+  // Bulk-fetch node info for validation
+  const nodeMap = new Map<string, { id: string; node_type_id: string }>();
+  if (nodeIds.size > 0) {
+    const placeholders = [...nodeIds].map(() => "?").join(",");
+    const nodeResult = await c.env.DB.prepare(
+      `SELECT id, node_type_id FROM nodes WHERE id IN (${placeholders}) AND graph_id = ?`,
+    )
+      .bind(...nodeIds, graph.id)
+      .all<{ id: string; node_type_id: string }>();
+    for (const n of nodeResult.results) {
+      nodeMap.set(n.id, n);
+    }
+  }
+
+  for (let i = 0; i < parsed.rows.length; i++) {
+    const row = parsed.rows[i];
+    const rowNum = i + 1;
+
+    // Validate source_node_id
+    if (!row.source_node_id) {
+      allErrors.push({ row: rowNum, field: "source_node_id", message: "source_node_id is required" });
+    } else {
+      const sourceNode = nodeMap.get(row.source_node_id);
+      if (!sourceNode) {
+        allErrors.push({ row: rowNum, field: "source_node_id", message: `Source node "${row.source_node_id}" not found` });
+      } else if (sourceNode.node_type_id !== importEdgeType.source_node_type_id) {
+        allErrors.push({ row: rowNum, field: "source_node_id", message: "Source node type does not match edge type constraint" });
+      }
+    }
+
+    // Validate target_node_id
+    if (!row.target_node_id) {
+      allErrors.push({ row: rowNum, field: "target_node_id", message: "target_node_id is required" });
+    } else {
+      const targetNode = nodeMap.get(row.target_node_id);
+      if (!targetNode) {
+        allErrors.push({ row: rowNum, field: "target_node_id", message: `Target node "${row.target_node_id}" not found` });
+      } else if (targetNode.node_type_id !== importEdgeType.target_node_type_id) {
+        allErrors.push({ row: rowNum, field: "target_node_id", message: "Target node type does not match edge type constraint" });
+      }
+    }
+
+    // Reject self-references
+    if (row.source_node_id && row.target_node_id && row.source_node_id === row.target_node_id) {
+      allErrors.push({ row: rowNum, field: "target_node_id", message: "Self-referencing edges are not allowed" });
+    }
+
+    // Validate field data
+    const validation = validateEntityData(row.data, importFields);
+    if (!validation.valid) {
+      for (const err of validation.errors) {
+        allErrors.push({ row: rowNum, field: err.field, message: err.message });
+      }
+    }
+  }
+
+  if (allErrors.length > 0) {
+    return c.json(
+      {
+        error: {
+          status: 400,
+          message: "Import validation failed",
+          details: allErrors,
+        },
+      },
+      400,
+    );
+  }
+
+  // Batch insert all edges
+  const now = new Date().toISOString();
+  const stmts = parsed.rows.map((row) => {
+    const id = generateId();
+    return c.env.DB.prepare(
+      "INSERT INTO edges (id, graph_id, edge_type_id, source_node_id, target_node_id, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    ).bind(id, graph.id, type, row.source_node_id, row.target_node_id, JSON.stringify(row.data), now, now);
+  });
+
+  await c.env.DB.batch(stmts);
+
+  return c.json({ data: { imported: parsed.rows.length } }, 201);
 });
 
 // GET /:edgeId — get single edge

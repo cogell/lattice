@@ -231,13 +231,13 @@ CSV export endpoints return all nodes/edges of a type as downloadable CSV (heade
 
 ### Acceptance criteria
 
-- [ ] `GET .../nodes/export?type=<nodeTypeId>` returns CSV with field-name headers
-- [ ] `GET .../edges/export?type=<edgeTypeId>` returns CSV with source, target, and field columns
-- [ ] `POST .../nodes/import?type=<nodeTypeId>` validates all rows, rejects entire batch on any error
-- [ ] `POST .../edges/import?type=<edgeTypeId>` validates and imports edges, matching source/target by node ID
-- [ ] Import errors (missing fields, type mismatches, constraint violations) returned per-row with clear messages
-- [ ] Files exceeding 5 MB or 5,000 rows rejected before processing
-- [ ] Integration tests cover export round-trips, import validation, and batch rejection
+- [x] `GET .../nodes/export?type=<nodeTypeId>` returns CSV with field-name headers
+- [x] `GET .../edges/export?type=<edgeTypeId>` returns CSV with source, target, and field columns
+- [x] `POST .../nodes/import?type=<nodeTypeId>` validates all rows, rejects entire batch on any error
+- [x] `POST .../edges/import?type=<edgeTypeId>` validates and imports edges, matching source/target by node ID
+- [x] Import errors (missing fields, type mismatches, constraint violations) returned per-row with clear messages
+- [x] Files exceeding 5 MB or 5,000 rows rejected before processing
+- [x] Integration tests cover export round-trips, import validation, and batch rejection
 
 ---
 
