@@ -224,7 +224,7 @@ function CreateEdgeFieldDialog({
     },
   })
 
-  const canSubmit = name.trim() && (!hasOptions || options.length > 0)
+  const canSubmit = name.trim() && (!hasOptions || (options.length > 0 && options.every(o => o.trim())))
 
   function handleAddOption() {
     const trimmed = newOption.trim()
@@ -232,6 +232,10 @@ function CreateEdgeFieldDialog({
       setOptions([...options, trimmed])
       setNewOption('')
     }
+  }
+
+  function handleEditOption(index: number, value: string) {
+    setOptions(options.map((o, i) => (i === index ? value : o)))
   }
 
   function handleRemoveOption(index: number) {
@@ -308,6 +312,7 @@ function CreateEdgeFieldDialog({
               newOption={newOption}
               onNewOptionChange={setNewOption}
               onAddOption={handleAddOption}
+              onEditOption={handleEditOption}
               onRemoveOption={handleRemoveOption}
             />
           )}
@@ -378,7 +383,7 @@ function EditEdgeFieldDialog({
     },
   })
 
-  const canSubmit = name.trim() && (!hasOptions || options.length > 0)
+  const canSubmit = name.trim() && (!hasOptions || (options.length > 0 && options.every(o => o.trim())))
 
   function handleAddOption() {
     const trimmed = newOption.trim()
@@ -386,6 +391,10 @@ function EditEdgeFieldDialog({
       setOptions([...options, trimmed])
       setNewOption('')
     }
+  }
+
+  function handleEditOption(index: number, value: string) {
+    setOptions(options.map((o, i) => (i === index ? value : o)))
   }
 
   function handleRemoveOption(index: number) {
@@ -439,6 +448,7 @@ function EditEdgeFieldDialog({
               newOption={newOption}
               onNewOptionChange={setNewOption}
               onAddOption={handleAddOption}
+              onEditOption={handleEditOption}
               onRemoveOption={handleRemoveOption}
             />
           )}
@@ -525,12 +535,14 @@ function OptionsEditor({
   newOption,
   onNewOptionChange,
   onAddOption,
+  onEditOption,
   onRemoveOption,
 }: {
   options: string[]
   newOption: string
   onNewOptionChange: (v: string) => void
   onAddOption: () => void
+  onEditOption: (index: number, value: string) => void
   onRemoveOption: (index: number) => void
 }) {
   return (
@@ -540,9 +552,11 @@ function OptionsEditor({
         <div className="space-y-1">
           {options.map((opt, i) => (
             <div key={i} className="flex items-center gap-1.5">
-              <span className="flex-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-sm">
-                {opt}
-              </span>
+              <Input
+                value={opt}
+                onChange={(e) => onEditOption(i, e.target.value)}
+                className="flex-1"
+              />
               <Button
                 type="button"
                 variant="ghost"

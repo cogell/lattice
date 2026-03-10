@@ -59,7 +59,7 @@ export function CreateFieldDialog({
     },
   })
 
-  const canSubmit = name.trim() && (!hasOptions || options.length > 0)
+  const canSubmit = name.trim() && (!hasOptions || (options.length > 0 && options.every(o => o.trim())))
 
   function handleAddOption() {
     const trimmed = newOption.trim()
@@ -67,6 +67,10 @@ export function CreateFieldDialog({
       setOptions([...options, trimmed])
       setNewOption('')
     }
+  }
+
+  function handleEditOption(index: number, value: string) {
+    setOptions(options.map((o, i) => (i === index ? value : o)))
   }
 
   function handleRemoveOption(index: number) {
@@ -144,9 +148,11 @@ export function CreateFieldDialog({
                 <div className="space-y-1">
                   {options.map((opt, i) => (
                     <div key={i} className="flex items-center gap-1.5">
-                      <span className="flex-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-sm">
-                        {opt}
-                      </span>
+                      <Input
+                        value={opt}
+                        onChange={(e) => handleEditOption(i, e.target.value)}
+                        className="flex-1"
+                      />
                       <Button
                         type="button"
                         variant="ghost"
