@@ -266,24 +266,26 @@ React SPA with Vite, TanStack Router, Tailwind CSS, and base-ui (shadcn/ui). App
 
 ---
 
-## Phase 9: Web UI — Schema Editor
+## Phase 9: Web UI — Schema Editor ✅
+
+**Status**: Complete
 
 **User stories**: 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
 
-### What to build
+### What was built
 
-Schema editor within graph settings. Create, edit, delete node types (name, color, icon, display field). Field CRUD with `required` and select option config. Edge types with directionality and source/target constraints. Field slugs hidden from UI.
+Schema editor at `/graphs/:graphId/settings` with full CRUD for node types, edge types, and their fields. Node types rendered as expandable cards with name, color, icon, and display field configuration. Edge types include directionality and source/target node type constraints. Field management supports all 8 field types with ordinal reordering, required flag, and select/multi_select option configuration. Delete operations show cascade confirmation dialogs. 11 dialog/form components: CreateNodeTypeDialog, EditNodeTypeDialog, DeleteNodeTypeDialog, CreateEdgeTypeDialog, EditEdgeTypeDialog, DeleteEdgeTypeDialog, CreateFieldDialog, EditFieldDialog, DeleteFieldDialog, NodeTypeFieldList, EdgeTypeFieldList.
 
 ### Acceptance criteria
 
-- [ ] User can create, edit, and delete node types
-- [ ] User can add, reorder, rename, and delete fields (all supported types)
-- [ ] User can configure `required` and select/multi_select options
-- [ ] Field slugs treated as internal; rename updates label only
-- [ ] User can set which field provides the display label
-- [ ] User can create, edit, and delete edge types (with source/target constraints)
-- [ ] Edge type field CRUD mirrors node type field CRUD
-- [ ] Deleting a type shows cascade confirmation
+- [x] User can create, edit, and delete node types
+- [x] User can add, reorder, rename, and delete fields (all supported types)
+- [x] User can configure `required` and select/multi_select options
+- [x] Field slugs treated as internal; rename updates label only
+- [x] User can set which field provides the display label
+- [x] User can create, edit, and delete edge types (with source/target constraints)
+- [x] Edge type field CRUD mirrors node type field CRUD
+- [x] Deleting a type shows cascade confirmation
 
 ---
 

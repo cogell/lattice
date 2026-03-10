@@ -18,8 +18,12 @@ pnpm install
 pnpm --filter api run db:migrate:local
 
 # Create .dev.vars for local dev secrets
-cp packages/api/.dev.vars.example packages/api/.dev.vars  # if available
+cat > packages/api/.dev.vars << 'EOF'
+DEV_AUTH_BYPASS=true
+EOF
 ```
+
+> **Note**: `DEV_AUTH_BYPASS=true` skips authentication and injects a deterministic dev user, so the web frontend works without a real email provider.
 
 ## Development
 
