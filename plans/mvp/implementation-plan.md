@@ -1,6 +1,6 @@
 # Plan: Lattice Implementation
 
-> Source PRD: [PRD.md](../PRD.md)
+> Source PRD: [prd.md](./prd.md)
 
 ## Architectural decisions
 
@@ -221,13 +221,15 @@ Pagination (offset/limit) for all list endpoints, plus server-side sorting and f
 
 ---
 
-## Phase 7: Import / Export API
+## Phase 7: Import / Export API ✅
+
+**Status**: Complete
 
 **User stories**: 47, 48, 49, 50, 51
 
-### What to build
+### What was built
 
-CSV export endpoints return all nodes/edges of a type as downloadable CSV (headers use field names). CSV import endpoints accept multipart upload (max 5 MB / 5,000 rows), validate all rows against field definitions, and reject the entire batch if any row fails — returning all errors at once so the user can fix and retry. Edge CSV import matches source/target by node ID.
+CSV export endpoints return all nodes/edges of a type as downloadable CSV (headers use field names). CSV import endpoints accept multipart upload (max 5 MB / 5,000 rows), validate all rows against field definitions, and reject the entire batch if any row fails — returning all errors at once so the user can fix and retry. Edge CSV import matches source/target by node ID. Shared CSV parsing/serialization utilities in `packages/shared` using PapaParse. 19 integration tests.
 
 ### Acceptance criteria
 
