@@ -113,15 +113,27 @@ async function parseResponse<T>(res: Response, schema: z.ZodType<T>): Promise<T>
   return schema.parse(json);
 }
 
+/** Options for configuring the API client factory. */
+export interface ApiClientOptions {
+  baseUrl: string;
+  getAuthHeader: () => string;
+  /** Extra RequestInit properties merged into every fetch call (e.g. credentials). */
+  fetchInit?: RequestInit;
+}
+
 /** Typed API client factory — methods added per phase. */
 export function createApiClient(
   baseUrl: string,
   getAuthHeader: () => string,
+  fetchInit?: RequestInit,
 ) {
   const headers = () => ({
     Authorization: getAuthHeader(),
     "Content-Type": "application/json",
   });
+
+  const doFetch = (url: string, init?: RequestInit) =>
+    fetch(url, { ...fetchInit, ...init, headers: { ...headers(), ...init?.headers } });
 
   const dataWrapper = <S extends z.ZodTypeAny>(schema: S) =>
     z.object({ data: schema });
@@ -143,6 +155,22 @@ export function createApiClient(
   const nodePaginatedResponse = paginatedWrapper(nodeSchema);
   const edgePaginatedResponse = paginatedWrapper(edgeSchema);
 
+  // Token schemas
+  const tokenSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    created_at: z.string(),
+    last_used_at: z.string().nullable(),
+  });
+  const createdTokenSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    token: z.string(),
+    created_at: z.string(),
+  });
+  const tokenListResponse = dataWrapper(z.array(tokenSchema));
+  const createdTokenResponse = dataWrapper(createdTokenSchema);
+
   return {
     _baseUrl: baseUrl,
     _headers: headers,
@@ -151,9 +179,9 @@ export function createApiClient(
 
     async createGraph(input: CreateGraphInput): Promise<Graph> {
       const body = createGraphSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs`, {
+      const res = await doFetch(`${baseUrl}/graphs`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, graphResponse);
@@ -162,21 +190,21 @@ export function createApiClient(
 
     async listGraphs(opts?: ListOptions): Promise<PaginatedResult<Graph>> {
       const qs = buildListQuery(opts);
-      const res = await fetch(`${baseUrl}/graphs${qs}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs${qs}`);
       return parseResponse(res, graphPaginatedResponse);
     },
 
     async getGraph(graphId: string): Promise<Graph> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}`);
       const parsed = await parseResponse(res, graphResponse);
       return parsed.data;
     },
 
     async updateGraph(graphId: string, input: UpdateGraphInput): Promise<Graph> {
       const body = updateGraphSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, graphResponse);
@@ -184,9 +212,9 @@ export function createApiClient(
     },
 
     async deleteGraph(graphId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -195,9 +223,9 @@ export function createApiClient(
 
     async createNodeType(graphId: string, input: CreateNodeTypeInput): Promise<NodeType> {
       const body = createNodeTypeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeTypeResponse);
@@ -205,22 +233,22 @@ export function createApiClient(
     },
 
     async listNodeTypes(graphId: string): Promise<NodeType[]> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types`);
       const parsed = await parseResponse(res, nodeTypeListResponse);
       return parsed.data;
     },
 
     async getNodeType(graphId: string, nodeTypeId: string): Promise<NodeType> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`);
       const parsed = await parseResponse(res, nodeTypeResponse);
       return parsed.data;
     },
 
     async updateNodeType(graphId: string, nodeTypeId: string, input: UpdateNodeTypeInput): Promise<NodeType> {
       const body = updateNodeTypeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeTypeResponse);
@@ -228,9 +256,9 @@ export function createApiClient(
     },
 
     async deleteNodeType(graphId: string, nodeTypeId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -239,9 +267,9 @@ export function createApiClient(
 
     async createEdgeType(graphId: string, input: CreateEdgeTypeInput): Promise<EdgeType> {
       const body = createEdgeTypeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeTypeResponse);
@@ -249,22 +277,22 @@ export function createApiClient(
     },
 
     async listEdgeTypes(graphId: string): Promise<EdgeType[]> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types`);
       const parsed = await parseResponse(res, edgeTypeListResponse);
       return parsed.data;
     },
 
     async getEdgeType(graphId: string, edgeTypeId: string): Promise<EdgeType> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`);
       const parsed = await parseResponse(res, edgeTypeResponse);
       return parsed.data;
     },
 
     async updateEdgeType(graphId: string, edgeTypeId: string, input: UpdateEdgeTypeInput): Promise<EdgeType> {
       const body = updateEdgeTypeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeTypeResponse);
@@ -272,9 +300,9 @@ export function createApiClient(
     },
 
     async deleteEdgeType(graphId: string, edgeTypeId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -283,9 +311,9 @@ export function createApiClient(
 
     async createNodeTypeField(graphId: string, nodeTypeId: string, input: CreateFieldInput): Promise<NodeTypeField> {
       const body = createFieldSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeTypeFieldResponse);
@@ -294,9 +322,9 @@ export function createApiClient(
 
     async updateNodeTypeField(graphId: string, nodeTypeId: string, fieldId: string, input: UpdateFieldInput): Promise<NodeTypeField> {
       const body = updateFieldSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields/${fieldId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields/${fieldId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeTypeFieldResponse);
@@ -304,9 +332,9 @@ export function createApiClient(
     },
 
     async deleteNodeTypeField(graphId: string, nodeTypeId: string, fieldId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields/${fieldId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields/${fieldId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -315,9 +343,9 @@ export function createApiClient(
 
     async createEdgeTypeField(graphId: string, edgeTypeId: string, input: CreateFieldInput): Promise<EdgeTypeField> {
       const body = createFieldSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeTypeFieldResponse);
@@ -326,9 +354,9 @@ export function createApiClient(
 
     async updateEdgeTypeField(graphId: string, edgeTypeId: string, fieldId: string, input: UpdateFieldInput): Promise<EdgeTypeField> {
       const body = updateFieldSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields/${fieldId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields/${fieldId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeTypeFieldResponse);
@@ -336,9 +364,9 @@ export function createApiClient(
     },
 
     async deleteEdgeTypeField(graphId: string, edgeTypeId: string, fieldId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields/${fieldId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields/${fieldId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -347,9 +375,9 @@ export function createApiClient(
 
     async createNode(graphId: string, input: CreateNodeInput): Promise<Node> {
       const body = createNodeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeResponse);
@@ -359,21 +387,21 @@ export function createApiClient(
     async listNodes(graphId: string, nodeTypeId?: string, opts?: ListOptions): Promise<PaginatedResult<Node>> {
       const extra = nodeTypeId ? { type: nodeTypeId } : undefined;
       const qs = buildListQuery(opts, extra);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes${qs}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes${qs}`);
       return parseResponse(res, nodePaginatedResponse);
     },
 
     async getNode(graphId: string, nodeId: string): Promise<Node> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`);
       const parsed = await parseResponse(res, nodeResponse);
       return parsed.data;
     },
 
     async updateNode(graphId: string, nodeId: string, input: UpdateNodeInput): Promise<Node> {
       const body = updateNodeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, nodeResponse);
@@ -381,9 +409,9 @@ export function createApiClient(
     },
 
     async deleteNode(graphId: string, nodeId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/nodes/${nodeId}`, {
         method: "DELETE",
-        headers: headers(),
+
       });
       await parseResponse(res, z.undefined());
     },
@@ -392,9 +420,9 @@ export function createApiClient(
 
     async createEdge(graphId: string, input: CreateEdgeInput): Promise<Edge> {
       const body = createEdgeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges`, {
         method: "POST",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeResponse);
@@ -404,21 +432,21 @@ export function createApiClient(
     async listEdges(graphId: string, edgeTypeId?: string, opts?: ListOptions): Promise<PaginatedResult<Edge>> {
       const extra = edgeTypeId ? { type: edgeTypeId } : undefined;
       const qs = buildListQuery(opts, extra);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges${qs}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges${qs}`);
       return parseResponse(res, edgePaginatedResponse);
     },
 
     async getEdge(graphId: string, edgeId: string): Promise<Edge> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, { headers: headers() });
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`);
       const parsed = await parseResponse(res, edgeResponse);
       return parsed.data;
     },
 
     async updateEdge(graphId: string, edgeId: string, input: UpdateEdgeInput): Promise<Edge> {
       const body = updateEdgeSchema.parse(input);
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
         method: "PATCH",
-        headers: headers(),
+
         body: JSON.stringify(body),
       });
       const parsed = await parseResponse(res, edgeResponse);
@@ -426,13 +454,39 @@ export function createApiClient(
     },
 
     async deleteEdge(graphId: string, edgeId: string): Promise<void> {
-      const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edges/${edgeId}`, {
         method: "DELETE",
-        headers: headers(),
+
+      });
+      await parseResponse(res, z.undefined());
+    },
+
+    // --- Token endpoints ---
+
+    async listTokens(): Promise<Token[]> {
+      const res = await doFetch(`${baseUrl}/settings/tokens`);
+      const parsed = await parseResponse(res, tokenListResponse);
+      return parsed.data;
+    },
+
+    async createToken(input: { name: string }): Promise<CreatedToken> {
+      const res = await doFetch(`${baseUrl}/settings/tokens`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      const parsed = await parseResponse(res, createdTokenResponse);
+      return parsed.data;
+    },
+
+    async deleteToken(tokenId: string): Promise<void> {
+      const res = await doFetch(`${baseUrl}/settings/tokens/${tokenId}`, {
+        method: "DELETE",
       });
       await parseResponse(res, z.undefined());
     },
   };
 }
 
+export type Token = { id: string; name: string; created_at: string; last_used_at: string | null };
+export type CreatedToken = { id: string; name: string; token: string; created_at: string };
 export { ApiError };

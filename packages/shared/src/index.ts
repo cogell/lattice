@@ -63,7 +63,7 @@ export {
   type UpdateEdgeInput,
 } from "./edges.js";
 
-export { createApiClient, ApiError, type ListOptions, type PaginatedResult } from "./api-client.js";
+export { createApiClient, ApiError, type ApiClientOptions, type ListOptions, type PaginatedResult, type Token, type CreatedToken } from "./api-client.js";
 
 export {
   paginationMetaSchema,
