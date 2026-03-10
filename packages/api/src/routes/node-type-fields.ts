@@ -51,6 +51,36 @@ nodeTypeFields.use("*", async (c, next) => {
   return next();
 });
 
+// GET / — list all fields for this node type
+nodeTypeFields.get("/", async (c) => {
+  const nodeType = c.get("nodeType" as never) as unknown as NodeTypeRow;
+
+  const result = await c.env.DB.prepare(
+    "SELECT id, node_type_id, name, slug, field_type, ordinal, required, config, created_at, updated_at FROM node_type_fields WHERE node_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(nodeType.id)
+    .all<{
+      id: string;
+      node_type_id: string;
+      name: string;
+      slug: string;
+      field_type: string;
+      ordinal: number;
+      required: number;
+      config: string;
+      created_at: string;
+      updated_at: string;
+    }>();
+
+  const fields = result.results.map((f) => ({
+    ...f,
+    required: !!f.required,
+    config: JSON.parse(f.config || "{}"),
+  }));
+
+  return c.json({ data: fields });
+});
+
 // POST / — create a field on this node type
 nodeTypeFields.post("/", async (c) => {
   const nodeType = c.get("nodeType" as never) as unknown as NodeTypeRow;

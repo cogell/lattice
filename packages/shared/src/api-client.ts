@@ -309,6 +309,12 @@ export function createApiClient(
 
     // --- Node Type Field endpoints ---
 
+    async listNodeTypeFields(graphId: string, nodeTypeId: string): Promise<NodeTypeField[]> {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields`);
+      const parsed = await parseResponse(res, dataWrapper(z.array(nodeTypeFieldSchema)));
+      return parsed.data;
+    },
+
     async createNodeTypeField(graphId: string, nodeTypeId: string, input: CreateFieldInput): Promise<NodeTypeField> {
       const body = createFieldSchema.parse(input);
       const res = await doFetch(`${baseUrl}/graphs/${graphId}/node-types/${nodeTypeId}/fields`, {
@@ -340,6 +346,12 @@ export function createApiClient(
     },
 
     // --- Edge Type Field endpoints ---
+
+    async listEdgeTypeFields(graphId: string, edgeTypeId: string): Promise<EdgeTypeField[]> {
+      const res = await doFetch(`${baseUrl}/graphs/${graphId}/edge-types/${edgeTypeId}/fields`);
+      const parsed = await parseResponse(res, dataWrapper(z.array(edgeTypeFieldSchema)));
+      return parsed.data;
+    },
 
     async createEdgeTypeField(graphId: string, edgeTypeId: string, input: CreateFieldInput): Promise<EdgeTypeField> {
       const body = createFieldSchema.parse(input);

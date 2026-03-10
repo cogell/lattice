@@ -31,6 +31,42 @@ async function getEdgeType(db: D1Database, graphId: string, edgeTypeId: string) 
     .first<{ id: string; graph_id: string; name: string; slug: string }>();
 }
 
+// GET / — list all fields for this edge type
+edgeTypeFields.get("/", async (c) => {
+  const edgeTypeId = c.req.param("edgeTypeId")!;
+  const graph = c.get("graph");
+
+  const edgeType = await getEdgeType(c.env.DB, graph.id, edgeTypeId);
+  if (!edgeType) {
+    return errorResponse(c, 404, "Edge type not found");
+  }
+
+  const result = await c.env.DB.prepare(
+    "SELECT id, edge_type_id, name, slug, field_type, ordinal, required, config, created_at, updated_at FROM edge_type_fields WHERE edge_type_id = ? ORDER BY ordinal ASC",
+  )
+    .bind(edgeTypeId)
+    .all<{
+      id: string;
+      edge_type_id: string;
+      name: string;
+      slug: string;
+      field_type: string;
+      ordinal: number;
+      required: number;
+      config: string;
+      created_at: string;
+      updated_at: string;
+    }>();
+
+  const fields = result.results.map((f) => ({
+    ...f,
+    required: !!f.required,
+    config: JSON.parse(f.config || "{}"),
+  }));
+
+  return c.json({ data: fields });
+});
+
 // POST /:edgeTypeId/fields — add a field to an edge type
 edgeTypeFields.post("/", async (c) => {
   const edgeTypeId = c.req.param("edgeTypeId")!;
