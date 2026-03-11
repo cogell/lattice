@@ -72,9 +72,12 @@ export function GraphCanvas({ viewData }: GraphCanvasProps) {
 
       const directed = edgeType?.directed ?? false
 
+      const edgeColor = edgeType?.color ?? '#94a3b8'
+
       const data: GraphEdgeData = {
         directed,
         edgeTypeName: edgeType?.name || 'Unknown',
+        color: edgeColor,
         fields: edge.data,
         fieldMeta:
           edgeType?.fields?.map((f) => ({
@@ -96,7 +99,7 @@ export function GraphCanvas({ viewData }: GraphCanvasProps) {
                 type: MarkerType.ArrowClosed,
                 width: 16,
                 height: 16,
-                color: '#94a3b8',
+                color: edgeColor,
               },
             }
           : {}),
