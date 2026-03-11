@@ -11,6 +11,8 @@ import { formatFieldValue, type FieldMeta } from '@/lib/format-field'
 export interface GraphEdgeData extends Record<string, unknown> {
   directed: boolean
   edgeTypeName: string
+  /** Edge type color for stroke rendering; falls back to #94a3b8 */
+  color?: string
   /** Actual field values keyed by slug */
   fields: Record<string, unknown>
   /** Field definitions for displaying human-readable labels */
@@ -46,6 +48,7 @@ function GraphEdgeComponent({
 
   const edgeTypeName = data?.edgeTypeName ?? 'Edge'
   const directed = data?.directed ?? false
+  const edgeColor = data?.color ?? '#94a3b8'
   const fields = data?.fields ?? {}
   const fieldMeta = data?.fieldMeta ?? []
 
@@ -65,7 +68,7 @@ function GraphEdgeComponent({
         markerEnd={markerEnd}
         style={{
           strokeWidth: 1.5,
-          stroke: '#94a3b8',
+          stroke: edgeColor,
           ...style,
         }}
         interactionWidth={20}
@@ -82,7 +85,11 @@ function GraphEdgeComponent({
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
           >
-            <div className="mb-1 flex items-baseline gap-1.5">
+            <div className="mb-1 flex items-center gap-1.5">
+              <span
+                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: edgeColor }}
+              />
               <span className="text-sm font-semibold">{edgeTypeName}</span>
               <span className="text-xs text-muted-foreground">
                 {directed ? '(directed)' : '(undirected)'}
