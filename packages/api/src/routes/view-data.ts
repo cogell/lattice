@@ -42,6 +42,7 @@ type EdgeTypeRow = {
   name: string;
   slug: string;
   directed: number;
+  color: string | null;
   source_node_type_id: string;
   target_node_type_id: string;
   created_at: string;
@@ -154,6 +155,7 @@ viewData.get("/", async (c) => {
     name: t.name,
     slug: t.slug,
     directed: t.directed === 1,
+    color: t.color ?? null,
     source_node_type_id: t.source_node_type_id,
     target_node_type_id: t.target_node_type_id,
     created_at: t.created_at,

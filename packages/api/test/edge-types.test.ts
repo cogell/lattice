@@ -17,6 +17,7 @@ type EdgeTypeData = {
   name: string;
   slug: string;
   directed: number;
+  color: string | null;
   source_node_type_id: string;
   target_node_type_id: string;
   created_at: string;
@@ -68,6 +69,7 @@ async function createEdgeType(
   data: {
     name?: string;
     directed?: boolean;
+    color?: string;
     source_node_type_id?: string;
     target_node_type_id?: string;
   },
@@ -108,6 +110,7 @@ async function updateEdgeType(
   data: {
     name?: string;
     directed?: boolean;
+    color?: string | null;
     source_node_type_id?: string;
     target_node_type_id?: string;
   },
