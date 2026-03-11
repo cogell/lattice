@@ -11,11 +11,27 @@ type EdgeTypeRow = {
   name: string;
   slug: string;
   directed: number;
+  color: string | null;
   source_node_type_id: string;
   target_node_type_id: string;
   created_at: string;
   updated_at: string;
 };
+
+const EDGE_TYPE_PALETTE = [
+  "#ef4444",
+  "#f97316",
+  "#f59e0b",
+  "#84cc16",
+  "#22c55e",
+  "#14b8a6",
+  "#06b6d4",
+  "#3b82f6",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+  "#78716c",
+];
 
 const edgeTypes = new Hono<{ Bindings: Bindings }>();
 
@@ -27,6 +43,7 @@ edgeTypes.post("/", async (c) => {
     directed?: boolean;
     source_node_type_id?: string;
     target_node_type_id?: string;
+    color?: string;
   }>();
 
   if (!body.name || typeof body.name !== "string" || !body.name.trim()) {
@@ -86,13 +103,31 @@ edgeTypes.post("/", async (c) => {
 
   const slug = generateUniqueSlug(name, existingSlugs.results.map((r) => r.slug));
 
+  // Determine color: use provided value, or auto-assign from palette
+  let color: string | null = null;
+  if (body.color !== undefined) {
+    color = body.color.trim() || null;
+  } else {
+    // Auto-assign: pick the next palette color not already in use
+    const usedColors = await c.env.DB.prepare(
+      "SELECT color FROM edge_types WHERE graph_id = ? AND color IS NOT NULL",
+    )
+      .bind(graph.id)
+      .all<{ color: string }>();
+
+    const usedSet = new Set(usedColors.results.map((r) => r.color));
+    const available = EDGE_TYPE_PALETTE.find((c) => !usedSet.has(c));
+    // If all palette colors are in use, cycle back to the first one
+    color = available ?? EDGE_TYPE_PALETTE[usedColors.results.length % EDGE_TYPE_PALETTE.length];
+  }
+
   const id = generateId();
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(
-    "INSERT INTO edge_types (id, graph_id, name, slug, directed, source_node_type_id, target_node_type_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO edge_types (id, graph_id, name, slug, directed, color, source_node_type_id, target_node_type_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   )
-    .bind(id, graph.id, name, slug, directed ? 1 : 0, body.source_node_type_id, body.target_node_type_id, now, now)
+    .bind(id, graph.id, name, slug, directed ? 1 : 0, color, body.source_node_type_id, body.target_node_type_id, now, now)
     .run();
 
   return c.json(
@@ -103,6 +138,7 @@ edgeTypes.post("/", async (c) => {
         name,
         slug,
         directed: !!directed,
+        color,
         source_node_type_id: body.source_node_type_id,
         target_node_type_id: body.target_node_type_id,
         created_at: now,
@@ -115,7 +151,7 @@ edgeTypes.post("/", async (c) => {
 
 /** Coerce SQLite integer booleans in an EdgeTypeRow to proper booleans. */
 function formatEdgeType(row: EdgeTypeRow) {
-  return { ...row, directed: row.directed === 1 };
+  return { ...row, directed: row.directed === 1, color: row.color ?? null };
 }
 
 // GET / — list all edge types for the graph
@@ -123,7 +159,7 @@ edgeTypes.get("/", async (c) => {
   const graph = c.get("graph");
 
   const result = await c.env.DB.prepare(
-    "SELECT id, graph_id, name, slug, directed, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE graph_id = ? ORDER BY created_at ASC",
+    "SELECT id, graph_id, name, slug, directed, color, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE graph_id = ? ORDER BY created_at ASC",
   )
     .bind(graph.id)
     .all<EdgeTypeRow>();
@@ -137,7 +173,7 @@ edgeTypes.get("/:edgeTypeId", async (c) => {
   const edgeTypeId = c.req.param("edgeTypeId");
 
   const edgeType = await c.env.DB.prepare(
-    "SELECT id, graph_id, name, slug, directed, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE id = ? AND graph_id = ?",
+    "SELECT id, graph_id, name, slug, directed, color, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE id = ? AND graph_id = ?",
   )
     .bind(edgeTypeId, graph.id)
     .first<EdgeTypeRow>();
@@ -149,7 +185,7 @@ edgeTypes.get("/:edgeTypeId", async (c) => {
   return c.json({ data: formatEdgeType(edgeType) });
 });
 
-// PATCH /:edgeTypeId — update name or directed flag only
+// PATCH /:edgeTypeId — update name, directed flag, or color
 edgeTypes.patch("/:edgeTypeId", async (c) => {
   const graph = c.get("graph");
   const edgeTypeId = c.req.param("edgeTypeId");
@@ -157,6 +193,7 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
   const body = await c.req.json<{
     name?: string;
     directed?: boolean;
+    color?: string | null;
     source_node_type_id?: string;
     target_node_type_id?: string;
   }>();
@@ -167,7 +204,7 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
   }
 
   const edgeType = await c.env.DB.prepare(
-    "SELECT id, graph_id, name, slug, directed, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE id = ? AND graph_id = ?",
+    "SELECT id, graph_id, name, slug, directed, color, source_node_type_id, target_node_type_id, created_at, updated_at FROM edge_types WHERE id = ? AND graph_id = ?",
   )
     .bind(edgeTypeId, graph.id)
     .first<EdgeTypeRow>();
@@ -178,6 +215,10 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
 
   const name = body.name !== undefined ? body.name.trim() : edgeType.name;
   const directed = body.directed !== undefined ? (body.directed ? 1 : 0) : edgeType.directed;
+  const color =
+    body.color !== undefined
+      ? body.color?.trim() || null
+      : edgeType.color;
 
   if (!name) {
     return errorResponse(c, 400, "Edge type name cannot be empty");
@@ -199,9 +240,9 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(
-    "UPDATE edge_types SET name = ?, directed = ?, updated_at = ? WHERE id = ?",
+    "UPDATE edge_types SET name = ?, directed = ?, color = ?, updated_at = ? WHERE id = ?",
   )
-    .bind(name, directed, now, edgeTypeId)
+    .bind(name, directed, color, now, edgeTypeId)
     .run();
 
   return c.json({
@@ -211,6 +252,7 @@ edgeTypes.patch("/:edgeTypeId", async (c) => {
       name,
       slug: edgeType.slug,
       directed: directed === 1,
+      color,
       source_node_type_id: edgeType.source_node_type_id,
       target_node_type_id: edgeType.target_node_type_id,
       created_at: edgeType.created_at,
