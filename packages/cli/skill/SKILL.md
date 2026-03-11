@@ -66,8 +66,18 @@ lattice edge-types create --name "Member Of" --source-type $PERSON --target-type
 
 ```bash
 lattice import nodes --type $PERSON --file people.csv        # headers = field display names
-lattice import edges --type $EDGE_TYPE --file relations.csv  # needs source_node_id, target_node_id
+lattice import edges --type $EDGE_TYPE --file relations.csv  # use node type names as headers
 lattice export nodes --type $PERSON --output backup.csv      # or omit --output for stdout
+```
+
+Edge import resolves display names to node IDs automatically. Use node type names as column headers for different-type edges, or `Source <Type>` / `Target <Type>` prefixes for same-type edges:
+
+```bash
+# Different source/target types
+echo 'Character,Species\nPicard,Human' > crew.csv
+
+# Same source/target type (e.g. Cocktail → Cocktail)
+echo 'Source Cocktail,Target Cocktail\nBoulevardier,Negroni' > variations.csv
 ```
 
 Limits: 5 MB / 5,000 rows. All-or-nothing — any validation error rejects the batch.

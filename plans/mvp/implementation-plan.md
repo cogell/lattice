@@ -41,7 +41,8 @@ Durable decisions that apply across all phases:
 - **API client**: `packages/shared` exports a typed API client factory (`createApiClient(baseUrl, getAuthHeader)`) returning methods for each endpoint group. The web app wraps these in TanStack Query hooks; the CLI uses them directly. Response payloads validated with shared Zod schemas
 - **Dev auth bypass**: `DEV_AUTH_BYPASS=true` in `.dev.vars` skips auth and injects a deterministic dev user
 - **Field types**: text, number, boolean, date, url, email, select, multi_select. The PRD also lists `json` but it is excluded from v1 to keep validation and UI rendering simple
-- **Excluded from v1**: bulk create/update/delete endpoints (PRD story 56) — CSV import covers batch needs for now. Edge CSV import matches by node ID only (PRD story 50 also mentions "designated lookup field" — deferred)
+- **Excluded from v1**: bulk create/update/delete endpoints (PRD story 56) — CSV import covers batch needs for now
+- **Edge CSV display-name import**: CLI resolves human-readable display-field values to node IDs before sending to the API. Supports node-type-name columns for different-type edges and `Source <Type>`/`Target <Type>` prefixed columns for same-type edges (shipped in Phase 12 follow-up)
 
 > **Note:** PRD user stories skip from 10 to 14 (11-13 were removed during PRD development). Some user stories appear in two phases — once for the API (Phases 2-7) and again for the UI (Phases 8-11). This is intentional: the API phase builds the endpoint, the UI phase builds the frontend for the same capability.
 

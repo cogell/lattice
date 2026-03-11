@@ -35,12 +35,29 @@ pnpm --filter api dev
 pnpm --filter web dev
 ```
 
+## CLI
+
+The Lattice CLI is published as `@cogell/lattice` on npm.
+
+```bash
+# Install globally
+npm i -g @cogell/lattice
+
+# Log in (defaults to production API)
+lattice login
+
+# Or point at a local dev server
+lattice login --api-url http://localhost:8787/api/v1 --token <pat-token>
+```
+
+See the [CLI reference](../packages/cli/skill/REFERENCE.md) for all commands.
+
 ## Project structure
 
 ```
 packages/
 ├── api/       Cloudflare Worker (Hono) — REST API
 ├── web/       React SPA (Vite + TanStack Router)
-├── cli/       CLI client
+├── cli/       CLI client (@cogell/lattice on npm)
 ├── shared/    Shared types, Zod schemas, API client
 ```

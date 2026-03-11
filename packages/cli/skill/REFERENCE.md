@@ -150,9 +150,32 @@ lattice import edges --type <edgeTypeId> --file <path>
 
 - Max file size: 5 MB, max rows: 5,000
 - CSV headers must match field **display names** (not slugs)
-- Edge CSVs must include `source_node_id` and `target_node_id` columns
 - All-or-nothing: any row validation error rejects the entire batch
 - On failure, all row-level errors are displayed
+
+### Edge CSV column formats
+
+Edge CSVs identify source and target nodes using one of three column styles:
+
+| Style | Columns | When to use |
+|-------|---------|-------------|
+| Raw IDs | `source_node_id`, `target_node_id` | Always works |
+| Display names | `<NodeTypeName>`, `<NodeTypeName>` | Different source/target types (e.g. `Character`, `Species`) |
+| Prefixed names | `Source <TypeName>`, `Target <TypeName>` | Same source/target type (e.g. `Source Cocktail`, `Target Cocktail`) |
+
+Display-name columns resolve against each node type's `display_field_slug`. Values must be unique within the node type.
+
+You can mix styles (e.g. `Source Cocktail` + `target_node_id`). Additional data columns are preserved alongside any style.
+
+```bash
+# Different types — use node type names as headers
+echo 'Character,Species\nPicard,Human' > crew.csv
+lattice import edges --type $EDGE_TYPE --file crew.csv
+
+# Same type — use Source/Target prefixes
+echo 'Source Cocktail,Target Cocktail\nBoulevardier,Negroni' > variations.csv
+lattice import edges --type $VARIATION_OF --file variations.csv
+```
 
 ## CSV Export
 
