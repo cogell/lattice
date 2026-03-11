@@ -1,3 +1,8 @@
+---
+status: completed
+archived: 2026-03-11
+---
+
 # Plan: Lattice Implementation
 
 > Source PRD: [prd.md](./prd.md)
