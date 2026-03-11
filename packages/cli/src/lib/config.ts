@@ -9,17 +9,22 @@ export interface LatticeConfig {
   active_graph_id?: string;
 }
 
-const CONFIG_DIR = join(homedir(), ".lattice");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+const DEFAULT_CONFIG_DIR = join(homedir(), ".lattice");
 
-export function readConfig(): LatticeConfig {
+function resolveConfigPaths(configDir?: string) {
+  const dir = configDir ?? DEFAULT_CONFIG_DIR;
+  return { dir, file: join(dir, "config.json") };
+}
+
+export function readConfig(configDir?: string): LatticeConfig {
+  const { file } = resolveConfigPaths(configDir);
   try {
-    const content = readFileSync(CONFIG_FILE, "utf-8");
+    const content = readFileSync(file, "utf-8");
     return JSON.parse(content) as LatticeConfig;
   } catch (err: unknown) {
     if (err instanceof SyntaxError) {
       throw new Error(
-        `Malformed config file at ${CONFIG_FILE}: ${err.message}`,
+        `Malformed config file at ${file}: ${err.message}`,
       );
     }
     const e = err as NodeJS.ErrnoException;
@@ -30,20 +35,21 @@ export function readConfig(): LatticeConfig {
   }
 }
 
-export function writeConfig(config: LatticeConfig): void {
-  mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+export function writeConfig(config: LatticeConfig, configDir?: string): void {
+  const { dir, file } = resolveConfigPaths(configDir);
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
   const tmpFile = join(
-    CONFIG_DIR,
+    dir,
     `.config.tmp.${randomBytes(4).toString("hex")}`,
   );
   writeFileSync(tmpFile, JSON.stringify(config, null, 2) + "\n", {
     mode: 0o600,
   });
-  renameSync(tmpFile, CONFIG_FILE);
+  renameSync(tmpFile, file);
 }
 
-export function getRequiredConfig(): { api_url: string; token: string } {
-  const config = readConfig();
+export function getRequiredConfig(configDir?: string): { api_url: string; token: string } {
+  const config = readConfig(configDir);
   if (!config.api_url || !config.token) {
     const missing: string[] = [];
     if (!config.api_url) missing.push("api_url");
