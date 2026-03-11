@@ -334,24 +334,26 @@ Table views using TanStack Table. Node table at `/graphs/:graphId/nodes/:nodeTyp
 
 ---
 
-## Phase 12: CLI + SKILL.md
+## Phase 12: CLI + SKILL.md ✅
+
+**Status**: Complete
 
 **User stories**: 59, 60, 61, 62, 63, 64, 65, 66, 67
 
-### What to build
+### What was built
 
-Node.js CLI in `packages/cli`. `lattice config set` stores API URL and PAT token. Commands for all CRUD operations, import/export CSV. All commands support `--json`. Filter syntax: `--filter 'field_slug[op]=value'` (operators: `eq`, `contains`, `is_null`). Uses the shared `createApiClient` from `packages/shared` for all API calls. Write SKILL.md documenting all commands with examples for AI agent consumption.
+Node.js CLI in `packages/cli` using Commander.js. `lattice config set` stores API URL and PAT token in `~/.lattice/config.json`. Full CRUD commands for graphs, node types, edge types, nodes, and edges. `lattice graphs use <id>` sets active graph context for subsequent commands. Import/export CSV via `lattice import` and `lattice export`. All commands support `--json` for scripting. Filter syntax: `--filter 'field_slug[op]=value'` (operators: `eq`, `contains`, `is_null`). Uses the shared `createApiClient` from `packages/shared` for all API calls. Field sub-commands (`fields list|create|update|delete`) for both node types and edge types. SKILL.md documents all commands with examples for AI agent consumption. 46 unit tests covering config persistence, output formatting, and filter parsing.
 
 ### Acceptance criteria
 
-- [ ] `lattice config set --api-url <url> --token <token>` persists config
-- [ ] `lattice graphs list|create|update|use|delete` work
-- [ ] `lattice graphs use <id>` persists the active graph ID in `~/.lattice/config.json`; subsequent type/node/edge commands default to it
-- [ ] Full CRUD commands for node types, edge types, nodes, and edges
-- [ ] `lattice nodes list --type <slug> --filter 'field[eq]=value'` filters results
-- [ ] `lattice import nodes --type <slug> --file <path>` imports CSV
-- [ ] `lattice export nodes --type <slug>` outputs CSV
-- [ ] `--json` flag on all commands
-- [ ] SKILL.md documents every command with usage, flags, and examples
-- [ ] SKILL.md includes common workflows using `--json` output
-- [ ] Light integration tests verify command parsing and output formatting
+- [x] `lattice config set --api-url <url> --token <token>` persists config
+- [x] `lattice graphs list|create|update|use|delete` work
+- [x] `lattice graphs use <id>` persists the active graph ID in `~/.lattice/config.json`; subsequent type/node/edge commands default to it
+- [x] Full CRUD commands for node types, edge types, nodes, and edges
+- [x] `lattice nodes list --type <slug> --filter 'field[eq]=value'` filters results
+- [x] `lattice import nodes --type <slug> --file <path>` imports CSV
+- [x] `lattice export nodes --type <slug>` outputs CSV
+- [x] `--json` flag on all commands
+- [x] SKILL.md documents every command with usage, flags, and examples
+- [x] SKILL.md includes common workflows using `--json` output
+- [x] Light integration tests verify command parsing and output formatting

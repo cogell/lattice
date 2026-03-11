@@ -79,7 +79,7 @@ export function ImportDialog({
           ? await api.importNodes(graphId, typeId, file)
           : await api.importEdges(graphId, typeId, file)
 
-      setSuccessCount(result.count)
+      setSuccessCount(result.imported)
       onSuccess()
     } catch (err: unknown) {
       const message =

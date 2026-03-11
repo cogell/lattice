@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { readConfig, writeConfig } from "../lib/config.js";
-import { handleError, isJsonMode, printJson, printEntityTable } from "../lib/output.js";
+import { handleError, isJsonMode, isQuietMode, printJson, printQuietId, printEntityTable } from "../lib/output.js";
 
 function maskToken(token: string): string {
   if (token.length <= 8) return "****";
@@ -30,7 +30,9 @@ export function registerConfigCommands(program: Command) {
         if (opts.token) existing.token = opts.token;
         writeConfig(existing);
 
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId("ok");
+        } else if (isJsonMode(cmd)) {
           printJson({ success: true });
         } else {
           console.log("Configuration updated.");

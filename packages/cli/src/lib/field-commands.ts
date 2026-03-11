@@ -4,7 +4,9 @@ import { resolveGraphId } from "./graph-context.js";
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printSuccess,
@@ -102,7 +104,9 @@ export function registerFieldSubcommands(
           };
         }
         const field = await api.create(graphId, opts.type, input);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(String((field as Record<string, unknown>).id));
+        } else if (isJsonMode(cmd)) {
           printJson(field);
         } else {
           const f = field as Record<string, unknown>;
@@ -155,7 +159,9 @@ export function registerFieldSubcommands(
           };
         }
         const field = await api.update(graphId, opts.type, fieldId, input);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(fieldId);
+        } else if (isJsonMode(cmd)) {
           printJson(field);
         } else {
           const f = field as Record<string, unknown>;
@@ -184,7 +190,9 @@ export function registerFieldSubcommands(
         const graphId = resolveGraphId(cmd);
         const api = getApi();
         await api.delete(graphId, opts.type, fieldId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(fieldId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: fieldId });
         } else {
           printSuccess(`Deleted field ${fieldId}`);

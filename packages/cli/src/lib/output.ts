@@ -6,6 +6,18 @@ export function isJsonMode(cmd: Command): boolean {
   return cmd.optsWithGlobals().json === true;
 }
 
+export function isQuietMode(cmd: Command): boolean {
+  return cmd.optsWithGlobals().quiet === true;
+}
+
+/**
+ * Print just a resource ID (for --quiet mode scripting).
+ * Writes to stdout with a trailing newline.
+ */
+export function printQuietId(id: string): void {
+  process.stdout.write(id + "\n");
+}
+
 export function printJson(data: unknown): void {
   process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }

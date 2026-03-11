@@ -4,7 +4,9 @@ import { readConfig, writeConfig } from "../lib/config.js";
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printPagination,
@@ -63,7 +65,9 @@ export function registerGraphCommands(program: Command) {
           name: opts.name,
           description: opts.description,
         });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(graph.id);
+        } else if (isJsonMode(cmd)) {
           printJson(graph);
         } else {
           printEntityTable(graph, [
@@ -119,7 +123,9 @@ export function registerGraphCommands(program: Command) {
         if (opts.name) input.name = opts.name;
         if (opts.description) input.description = opts.description;
         const graph = await client.updateGraph(graphId, input);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(graph.id);
+        } else if (isJsonMode(cmd)) {
           printJson(graph);
         } else {
           printEntityTable(graph, [
@@ -142,7 +148,9 @@ export function registerGraphCommands(program: Command) {
       try {
         const client = getClient();
         await client.deleteGraph(graphId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(graphId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: graphId });
         } else {
           printSuccess(`Deleted graph ${graphId}`);
@@ -163,7 +171,9 @@ export function registerGraphCommands(program: Command) {
         const config = readConfig();
         config.active_graph_id = graph.id;
         writeConfig(config);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(graph.id);
+        } else if (isJsonMode(cmd)) {
           printJson({ active_graph_id: graph.id, name: graph.name });
         } else {
           printSuccess(`Now using graph: ${graph.name} (${graph.id})`);

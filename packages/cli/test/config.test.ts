@@ -3,7 +3,7 @@ import { mkdirSync, rmSync, writeFileSync, readFileSync, statSync, existsSync } 
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
-import { readConfig, writeConfig, getRequiredConfig } from "../src/lib/config.js";
+import { readConfig, writeConfig, getRequiredConfig, DEFAULT_API_URL } from "../src/lib/config.js";
 
 function createTempDir() {
   const dir = join(tmpdir(), `lattice-test-${randomBytes(4).toString("hex")}`);
@@ -164,25 +164,27 @@ describe("getRequiredConfig", () => {
     expect(config.token).toBe("lat_abc123");
   });
 
-  it("throws when api_url is missing", () => {
+  it("defaults api_url when only token is set", () => {
     writeConfig({ token: "lat_abc123" }, tempDir);
 
-    expect(() => getRequiredConfig(tempDir)).toThrow(/Missing config: api_url/);
+    const config = getRequiredConfig(tempDir);
+    expect(config.api_url).toBe(DEFAULT_API_URL);
+    expect(config.token).toBe("lat_abc123");
   });
 
   it("throws when token is missing", () => {
     writeConfig({ api_url: "http://localhost:8787" }, tempDir);
 
-    expect(() => getRequiredConfig(tempDir)).toThrow(/Missing config: token/);
+    expect(() => getRequiredConfig(tempDir)).toThrow(/Not logged in/);
   });
 
   it("throws when both are missing", () => {
     writeConfig({}, tempDir);
 
-    expect(() => getRequiredConfig(tempDir)).toThrow(/Missing config: api_url, token/);
+    expect(() => getRequiredConfig(tempDir)).toThrow(/Not logged in/);
   });
 
-  it("throws with guidance to run config set", () => {
-    expect(() => getRequiredConfig(tempDir)).toThrow(/lattice config set/);
+  it("throws with guidance to run lattice login", () => {
+    expect(() => getRequiredConfig(tempDir)).toThrow(/lattice login/);
   });
 });

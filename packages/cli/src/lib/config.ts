@@ -9,6 +9,8 @@ export interface LatticeConfig {
   active_graph_id?: string;
 }
 
+export const DEFAULT_API_URL = "https://lattice-api.cogell.workers.dev/api/v1";
+
 const DEFAULT_CONFIG_DIR = join(homedir(), ".lattice");
 
 function resolveConfigPaths(configDir?: string) {
@@ -50,13 +52,11 @@ export function writeConfig(config: LatticeConfig, configDir?: string): void {
 
 export function getRequiredConfig(configDir?: string): { api_url: string; token: string } {
   const config = readConfig(configDir);
-  if (!config.api_url || !config.token) {
-    const missing: string[] = [];
-    if (!config.api_url) missing.push("api_url");
-    if (!config.token) missing.push("token");
+  const api_url = config.api_url || DEFAULT_API_URL;
+  if (!config.token) {
     throw new Error(
-      `Missing config: ${missing.join(", ")}. Run 'lattice config set --api-url <url> --token <token>' first.`,
+      `Not logged in. Run 'lattice login' first.`,
     );
   }
-  return { api_url: config.api_url, token: config.token };
+  return { api_url, token: config.token };
 }

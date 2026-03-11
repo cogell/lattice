@@ -5,7 +5,9 @@ import { resolveGraphId } from "../lib/graph-context.js";
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printSuccess,
@@ -50,7 +52,7 @@ export function registerEdgeTypeCommands(program: Command) {
     .requiredOption("--name <name>", "Edge type name")
     .requiredOption("--source-type <id>", "Source node type ID")
     .requiredOption("--target-type <id>", "Target node type ID")
-    .option("--directed", "Directed edge (default)")
+    .option("--directed", "Directed edge (default)", true)
     .option("--undirected", "Undirected edge")
     .action(async (opts, cmd) => {
       try {
@@ -63,7 +65,9 @@ export function registerEdgeTypeCommands(program: Command) {
           target_node_type_id: opts.targetType,
           directed,
         });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edgeType.id);
+        } else if (isJsonMode(cmd)) {
           printJson(edgeType);
         } else {
           printEntityTable(edgeType, [
@@ -127,26 +131,20 @@ export function registerEdgeTypeCommands(program: Command) {
             "Provide at least one of --name, --directed, or --undirected",
           );
         }
-        if (opts.directed !== undefined && opts.undirected !== undefined) {
-          throw new Error(
-            "Cannot pass both --directed and --undirected",
-          );
-        }
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         const input: Record<string, unknown> = {};
         if (opts.name) input.name = opts.name;
-        if (opts.undirected !== undefined) {
-          input.directed = false;
-        } else if (opts.directed !== undefined) {
-          input.directed = true;
-        }
+        if (opts.directed !== undefined) input.directed = true;
+        if (opts.undirected !== undefined) input.directed = false;
         const edgeType = await client.updateEdgeType(
           graphId,
           edgeTypeId,
           input,
         );
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edgeType.id);
+        } else if (isJsonMode(cmd)) {
           printJson(edgeType);
         } else {
           printEntityTable(edgeType, [
@@ -171,7 +169,9 @@ export function registerEdgeTypeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         await client.deleteEdgeType(graphId, edgeTypeId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edgeTypeId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: edgeTypeId });
         } else {
           printSuccess(`Deleted edge type ${edgeTypeId}`);

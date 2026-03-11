@@ -5,7 +5,9 @@ import { resolveGraphId } from "../lib/graph-context.js";
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printSuccess,
@@ -60,7 +62,9 @@ export function registerNodeTypeCommands(program: Command) {
         if (opts.color) input.color = opts.color;
         if (opts.icon) input.icon = opts.icon;
         const nodeType = await client.createNodeType(graphId, input);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(nodeType.id);
+        } else if (isJsonMode(cmd)) {
           printJson(nodeType);
         } else {
           printEntityTable(nodeType, [
@@ -137,7 +141,9 @@ export function registerNodeTypeCommands(program: Command) {
           nodeTypeId,
           input,
         );
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(nodeType.id);
+        } else if (isJsonMode(cmd)) {
           printJson(nodeType);
         } else {
           printEntityTable(nodeType, [
@@ -164,7 +170,9 @@ export function registerNodeTypeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         await client.deleteNodeType(graphId, nodeTypeId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(nodeTypeId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: nodeTypeId });
         } else {
           printSuccess(`Deleted node type ${nodeTypeId}`);

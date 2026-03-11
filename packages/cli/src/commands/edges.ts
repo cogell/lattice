@@ -10,7 +10,9 @@ import {
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printPagination,
@@ -113,7 +115,9 @@ export function registerEdgeCommands(program: Command) {
           target_node_id: opts.target,
           data,
         });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edge.id);
+        } else if (isJsonMode(cmd)) {
           printJson(edge);
         } else {
           printEntityTable(
@@ -187,7 +191,9 @@ export function registerEdgeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         const edge = await client.updateEdge(graphId, edgeId, { data });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edge.id);
+        } else if (isJsonMode(cmd)) {
           printJson(edge);
         } else {
           printEntityTable(
@@ -209,7 +215,9 @@ export function registerEdgeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         await client.deleteEdge(graphId, edgeId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(edgeId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: edgeId });
         } else {
           printSuccess(`Deleted edge ${edgeId}`);

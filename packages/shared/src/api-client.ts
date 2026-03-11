@@ -539,7 +539,7 @@ export function createApiClient(
       return res.blob();
     },
 
-    async importNodes(graphId: string, nodeTypeId: string, file: File): Promise<{ count: number }> {
+    async importNodes(graphId: string, nodeTypeId: string, file: File): Promise<{ imported: number }> {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch(`${baseUrl}/graphs/${graphId}/nodes/import?type=${nodeTypeId}`, {
@@ -568,7 +568,7 @@ export function createApiClient(
       return res.blob();
     },
 
-    async importEdges(graphId: string, edgeTypeId: string, file: File): Promise<{ count: number }> {
+    async importEdges(graphId: string, edgeTypeId: string, file: File): Promise<{ imported: number }> {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch(`${baseUrl}/graphs/${graphId}/edges/import?type=${edgeTypeId}`, {

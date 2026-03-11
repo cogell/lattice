@@ -10,7 +10,9 @@ import {
 import {
   handleError,
   isJsonMode,
+  isQuietMode,
   printJson,
+  printQuietId,
   printTable,
   printEntityTable,
   printPagination,
@@ -106,7 +108,9 @@ export function registerNodeCommands(program: Command) {
           node_type_id: opts.type,
           data,
         });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(node.id);
+        } else if (isJsonMode(cmd)) {
           printJson(node);
         } else {
           printEntityTable(
@@ -172,7 +176,9 @@ export function registerNodeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         const node = await client.updateNode(graphId, nodeId, { data });
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(node.id);
+        } else if (isJsonMode(cmd)) {
           printJson(node);
         } else {
           printEntityTable(
@@ -194,7 +200,9 @@ export function registerNodeCommands(program: Command) {
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         await client.deleteNode(graphId, nodeId);
-        if (isJsonMode(cmd)) {
+        if (isQuietMode(cmd)) {
+          printQuietId(nodeId);
+        } else if (isJsonMode(cmd)) {
           printJson({ deleted: true, id: nodeId });
         } else {
           printSuccess(

@@ -1,5 +1,5 @@
-#!/usr/bin/env node
 import { Command } from "commander";
+import { registerAuthCommands } from "./commands/auth.js";
 import { registerConfigCommands } from "./commands/config.js";
 import { registerGraphCommands } from "./commands/graphs.js";
 import { registerNodeTypeCommands } from "./commands/node-types.js";
@@ -16,8 +16,10 @@ program
   .description("CLI for Lattice graph database")
   .version("0.0.0")
   .option("--json", "Output results as JSON")
+  .option("-q, --quiet", "Output only the resource ID (for scripting)")
   .option("--graph <id>", "Graph ID (overrides active graph context)");
 
+registerAuthCommands(program);
 registerConfigCommands(program);
 registerGraphCommands(program);
 registerNodeTypeCommands(program);
