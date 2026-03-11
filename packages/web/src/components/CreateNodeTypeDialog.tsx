@@ -30,7 +30,7 @@ export function CreateNodeTypeDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [color, setColor] = useState(PALETTE[0])
+  const [color, setColor] = useState<string>(PALETTE[0])
   const [icon, setIcon] = useState(ICON_OPTIONS[0])
   const queryClient = useQueryClient()
 
