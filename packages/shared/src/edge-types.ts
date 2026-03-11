@@ -7,11 +7,13 @@ export const createEdgeTypeSchema = z.object({
   directed: z.boolean().optional().default(true),
   source_node_type_id: z.string().min(1, "Source node type is required"),
   target_node_type_id: z.string().min(1, "Target node type is required"),
+  color: z.string().trim().optional(),
 });
 
 export const updateEdgeTypeSchema = z.object({
   name: z.string().min(1, "Edge type name cannot be empty").trim().optional(),
   directed: z.boolean().optional(),
+  color: z.string().trim().nullable().optional(),
 });
 
 export const edgeTypeSchema = z.object({
@@ -20,6 +22,7 @@ export const edgeTypeSchema = z.object({
   name: z.string(),
   slug: z.string(),
   directed: z.boolean(),
+  color: z.string().nullable(),
   source_node_type_id: z.string(),
   target_node_type_id: z.string(),
   created_at: z.string(),

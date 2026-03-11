@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { edgeTypeKeys, nodeTypeKeys, viewDataKeys } from '@/lib/query'
+import { PALETTE, getNextColor } from '@/lib/color-palette'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -33,11 +34,33 @@ export function CreateEdgeTypeDialog({
     queryFn: () => api.listNodeTypes(graphId),
   })
 
+  const { data: edgeTypes } = useQuery({
+    queryKey: edgeTypeKeys.list(graphId),
+    queryFn: () => api.listEdgeTypes(graphId),
+  })
+
+  const defaultColor = useMemo(() => {
+    const usedColors = (edgeTypes ?? [])
+      .map((et) => et.color)
+      .filter((c): c is string => c !== null)
+    return getNextColor(usedColors)
+  }, [edgeTypes])
+
+  const [color, setColor] = useState(defaultColor)
+
+  // Sync default color when edgeTypes load or dialog opens
+  const [lastDefaultColor, setLastDefaultColor] = useState(defaultColor)
+  if (defaultColor !== lastDefaultColor) {
+    setColor(defaultColor)
+    setLastDefaultColor(defaultColor)
+  }
+
   const createEdgeType = useMutation({
     mutationFn: () =>
       api.createEdgeType(graphId, {
         name,
         directed,
+        color,
         source_node_type_id: sourceNodeTypeId,
         target_node_type_id: targetNodeTypeId,
       }),
@@ -49,6 +72,12 @@ export function CreateEdgeTypeDialog({
       setDirected(true)
       setSourceNodeTypeId('')
       setTargetNodeTypeId('')
+      // Reset color to next available on next open
+      const usedColors = (edgeTypes ?? [])
+        .map((et) => et.color)
+        .filter((c): c is string => c !== null)
+      usedColors.push(color)
+      setColor(getNextColor(usedColors))
     },
   })
 
@@ -81,6 +110,23 @@ export function CreateEdgeTypeDialog({
               required
               autoFocus
             />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Color</label>
+            <div className="flex flex-wrap gap-1.5">
+              {PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className="h-7 w-7 rounded-md border-2 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: color === c ? 'var(--color-foreground)' : 'transparent',
+                  }}
+                />
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <input
