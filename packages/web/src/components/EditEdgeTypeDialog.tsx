@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { edgeTypeKeys, viewDataKeys } from '@/lib/query'
+import { PALETTE } from '@/lib/color-palette'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -30,18 +31,20 @@ export function EditEdgeTypeDialog({
 }: EditEdgeTypeDialogProps) {
   const [name, setName] = useState(edgeType.name)
   const [directed, setDirected] = useState(edgeType.directed)
+  const [color, setColor] = useState(edgeType.color ?? PALETTE[0])
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (open) {
       setName(edgeType.name)
       setDirected(edgeType.directed)
+      setColor(edgeType.color ?? PALETTE[0])
     }
   }, [open, edgeType])
 
   const updateEdgeType = useMutation({
     mutationFn: () =>
-      api.updateEdgeType(graphId, edgeType.id, { name, directed }),
+      api.updateEdgeType(graphId, edgeType.id, { name, directed, color }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: edgeTypeKeys.list(graphId) })
       queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
@@ -80,6 +83,23 @@ export function EditEdgeTypeDialog({
               required
               autoFocus
             />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Color</label>
+            <div className="flex flex-wrap gap-1.5">
+              {PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className="h-7 w-7 rounded-md border-2 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    borderColor: color === c ? 'var(--color-foreground)' : 'transparent',
+                  }}
+                />
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <input
