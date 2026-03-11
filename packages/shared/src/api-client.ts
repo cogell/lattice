@@ -94,16 +94,28 @@ function buildListQuery(opts?: ListOptions, extra?: Record<string, string>): str
 }
 
 class ApiError extends Error {
+  /** Per-row validation details returned by import endpoints. */
+  details?: Array<{ row: number; field: string; message: string }>;
+
   constructor(
     public status: number,
     message: string,
+    details?: Array<{ row: number; field: string; message: string }>,
   ) {
     super(message);
     this.name = "ApiError";
+    if (details) this.details = details;
   }
 }
 
 const errorBody = z.object({ error: z.object({ status: z.number(), message: z.string() }) });
+const importErrorBody = z.object({
+  error: z.object({
+    status: z.number(),
+    message: z.string(),
+    details: z.array(z.object({ row: z.number(), field: z.string(), message: z.string() })),
+  }),
+});
 
 async function parseResponse<T>(res: Response, schema: z.ZodType<T>): Promise<T> {
   if (!res.ok) {
@@ -538,6 +550,10 @@ export function createApiClient(
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        const importParsed = importErrorBody.safeParse(body);
+        if (importParsed.success) {
+          throw new ApiError(res.status, importParsed.data.error.message, importParsed.data.error.details);
+        }
         const parsed = errorBody.safeParse(body);
         const message = parsed.success ? parsed.data.error.message : `HTTP ${res.status}`;
         throw new ApiError(res.status, message);
@@ -563,6 +579,10 @@ export function createApiClient(
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        const importParsed = importErrorBody.safeParse(body);
+        if (importParsed.success) {
+          throw new ApiError(res.status, importParsed.data.error.message, importParsed.data.error.details);
+        }
         const parsed = errorBody.safeParse(body);
         const message = parsed.success ? parsed.data.error.message : `HTTP ${res.status}`;
         throw new ApiError(res.status, message);
