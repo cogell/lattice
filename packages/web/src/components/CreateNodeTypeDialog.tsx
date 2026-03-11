@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { PALETTE } from '@/lib/color-palette'
 import { nodeTypeKeys, viewDataKeys } from '@/lib/query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,12 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-
-const COLOR_PALETTE = [
-  '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e',
-  '#14b8a6', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7',
-  '#ec4899', '#78716c',
-]
 
 const ICON_OPTIONS = [
   'circle', 'square', 'triangle', 'star', 'heart',
@@ -35,7 +30,7 @@ export function CreateNodeTypeDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [color, setColor] = useState(COLOR_PALETTE[0])
+  const [color, setColor] = useState<string>(PALETTE[0])
   const [icon, setIcon] = useState(ICON_OPTIONS[0])
   const queryClient = useQueryClient()
 
@@ -46,7 +41,7 @@ export function CreateNodeTypeDialog({
       queryClient.invalidateQueries({ queryKey: viewDataKeys.all })
       setOpen(false)
       setName('')
-      setColor(COLOR_PALETTE[0])
+      setColor(PALETTE[0])
       setIcon(ICON_OPTIONS[0])
     },
   })
@@ -84,7 +79,7 @@ export function CreateNodeTypeDialog({
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Color</label>
             <div className="flex flex-wrap gap-1.5">
-              {COLOR_PALETTE.map((c) => (
+              {PALETTE.map((c) => (
                 <button
                   key={c}
                   type="button"

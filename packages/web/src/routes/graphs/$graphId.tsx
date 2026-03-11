@@ -202,6 +202,10 @@ function EdgeTypeNavLink({
           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
       }`}
     >
+      <span
+        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+        style={{ backgroundColor: edgeType.color ?? '#78716c' }}
+      />
       <span className="truncate">{edgeType.name}</span>
     </Link>
   )
