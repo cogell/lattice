@@ -50,7 +50,7 @@ export function registerEdgeTypeCommands(program: Command) {
     .requiredOption("--name <name>", "Edge type name")
     .requiredOption("--source-type <id>", "Source node type ID")
     .requiredOption("--target-type <id>", "Target node type ID")
-    .option("--directed", "Directed edge (default)", true)
+    .option("--directed", "Directed edge (default)")
     .option("--undirected", "Undirected edge")
     .action(async (opts, cmd) => {
       try {
@@ -127,12 +127,20 @@ export function registerEdgeTypeCommands(program: Command) {
             "Provide at least one of --name, --directed, or --undirected",
           );
         }
+        if (opts.directed !== undefined && opts.undirected !== undefined) {
+          throw new Error(
+            "Cannot pass both --directed and --undirected",
+          );
+        }
         const graphId = resolveGraphId(cmd);
         const client = getClient();
         const input: Record<string, unknown> = {};
         if (opts.name) input.name = opts.name;
-        if (opts.directed !== undefined) input.directed = true;
-        if (opts.undirected !== undefined) input.directed = false;
+        if (opts.undirected !== undefined) {
+          input.directed = false;
+        } else if (opts.directed !== undefined) {
+          input.directed = true;
+        }
         const edgeType = await client.updateEdgeType(
           graphId,
           edgeTypeId,
