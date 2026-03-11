@@ -2,6 +2,7 @@ import { env } from "cloudflare:test";
 import { beforeAll, beforeEach } from "vitest";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_better_auth.sql?raw";
+import migration0003 from "../migrations/0003_edge_type_color.sql?raw";
 
 function splitStatements(sql: string): string[] {
   // Remove comments (standalone lines starting with --)
@@ -20,6 +21,7 @@ beforeAll(async () => {
   const statements = [
     ...splitStatements(migration0001),
     ...splitStatements(migration0002),
+    ...splitStatements(migration0003),
   ];
   await env.DB.batch(statements.map((s) => env.DB.prepare(s)));
 });
