@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { ApiError } from "@lattice/shared";
 import { getClient } from "../lib/client.js";
 import { resolveGraphId } from "../lib/graph-context.js";
 import {
@@ -54,7 +55,7 @@ export function registerImportCommands(program: Command) {
       } catch (err) {
         if (isImportValidationError(err)) {
           if (isJsonMode(cmd)) {
-            printJson(err);
+            printJson({ error: { status: err.status, message: err.message, details: err.details } });
           } else {
             displayImportErrors(err);
           }
@@ -83,7 +84,7 @@ export function registerImportCommands(program: Command) {
       } catch (err) {
         if (isImportValidationError(err)) {
           if (isJsonMode(cmd)) {
-            printJson(err);
+            printJson({ error: { status: err.status, message: err.message, details: err.details } });
           } else {
             displayImportErrors(err);
           }
@@ -94,27 +95,21 @@ export function registerImportCommands(program: Command) {
     });
 }
 
-interface ImportError {
-  status: number;
-  errors?: Array<{ row?: number; field?: string; message: string }>;
-}
-
-function isImportValidationError(err: unknown): err is ImportError {
+function isImportValidationError(err: unknown): err is ApiError & { details: Array<{ row: number; field: string; message: string }> } {
   return (
-    typeof err === "object" &&
-    err !== null &&
-    "errors" in err &&
-    Array.isArray((err as ImportError).errors)
+    err instanceof ApiError &&
+    Array.isArray(err.details) &&
+    err.details.length > 0
   );
 }
 
-function displayImportErrors(err: ImportError) {
+function displayImportErrors(err: ApiError & { details: Array<{ row: number; field: string; message: string }> }) {
   console.error("Import failed with validation errors:\n");
   printTable(
     ["Row", "Field", "Error"],
-    (err.errors ?? []).map((e) => [
-      e.row !== undefined ? String(e.row) : "",
-      e.field ?? "",
+    err.details.map((e) => [
+      String(e.row),
+      e.field,
       e.message,
     ]),
   );
